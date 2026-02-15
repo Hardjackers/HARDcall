@@ -1,3 +1,13 @@
+/*
+ * HARDcall - Secure Communication Portal
+ * Copyright (c) 2026 Hardjackers
+ * Desenvolvido por: Hardjackers
+ * GitHub: https://github.com/Hardjackers
+ *
+ * Todos os direitos reservados. É proibida a cópia ou redistribuição
+ * não autorizada deste código.
+ */
+
 /* HARDcall v12 - Online Users Dropdown */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously, EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
