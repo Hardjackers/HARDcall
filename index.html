@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HARDcall | Secure Comm Link</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔒</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body>
+
+    <div id="app-container">
+        
+        <section id="login-screen" class="screen active">
+            <div class="login-box">
+                <h1>HARDcall <span class="blink">_</span></h1>
+                
+                <div class="login-section">
+                    <p class="login-label">Tenha Chats Permanentes</p>
+                    <button id="btn-google-login" class="btn-primary">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G" width="20">
+                        Entrar com Google
+                    </button>
+                    <button id="btn-email-login-open" class="btn-secondary full-width margin-top">
+                        Entrar com E-mail e Senha
+                    </button>
+                    <p class="tiny-help-text">
+                        Para configurar senha, entre com Google, vá em Perfil e defina uma credencial.
+                    </p>
+                </div>
+
+                <div class="separator-line"></div>
+
+                <div class="login-section">
+                    <p class="login-label">Sala Temporária</p>
+                    <input type="text" id="guest-room-code" placeholder="Nome da Sala Temporária">
+                    <input type="password" id="guest-room-pass" placeholder="Senha (Opcional)">
+                    <button id="btn-guest-enter" class="btn-secondary">Criar / Entrar</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="setup-screen" class="screen hidden">
+            <div class="setup-box">
+                <h2>Identificação</h2>
+                <p>Defina seu codinome permanente.</p>
+                <input type="text" id="setup-nickname" placeholder="Ex: Operador01" maxlength="15">
+                <button id="btn-save-setup" class="btn-primary">Confirmar Identidade</button>
+            </div>
+        </section>
+
+        <section id="lobby-screen" class="screen hidden">
+            <header class="top-bar">
+                <div class="user-info-container">
+                    <button id="btn-my-profile" class="profile-btn" title="Meu Perfil">
+                        <span id="display-name">...</span>
+                        <span class="edit-icon">✎</span>
+                    </button>
+                    <div class="status-badge-inline">CONECTADO</div>
+                </div>
+                <div class="lobby-actions">
+                    <button id="btn-logout" class="btn-danger">Sair</button>
+                </div>
+            </header>
+
+            <div class="lobby-content">
+                <div class="panel create-panel">
+                    <h3>Nova Frequência</h3>
+                    <input type="text" id="create-room-code" placeholder="Nome da Sala (Ex: BASE01)" maxlength="15">
+                    <input type="password" id="create-room-pass" placeholder="Senha (Opcional)">
+                    <div class="options-row centered-checkbox">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="check-ephemeral-create" checked> 
+                            <span class="checkmark"></span>
+                            Autodestruição (Padrão)
+                        </label>
+                    </div>
+                    <button id="btn-create-room" class="btn-action">Criar Sala</button>
+                </div>
+
+                <div class="panel join-panel">
+                    <h3>Acessar Frequência</h3>
+                    <input type="text" id="join-room-code" placeholder="Nome da Sala">
+                    <input type="password" id="join-room-pass" placeholder="Senha da Sala">
+                    <button id="btn-join-room" class="btn-action">Conectar</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="chat-screen" class="screen hidden">
+            <header class="chat-header">
+                <div class="room-info">
+                    <button id="btn-leave-room" class="btn-back">← Sair</button>
+                    <span id="room-id-display">Sala: -----</span>
+                </div>
+                <div class="room-actions">
+                    <button id="btn-room-users" class="users-counter" title="Ver quem está online">
+                        <span class="dot">●</span> <span id="online-count">1</span> Online
+                    </button>
+                    <button id="btn-room-settings" class="icon-btn" title="Configurações">⚙️</button>
+                </div>
+            </header>
+
+            <div id="temp-room-warning" class="temp-warning-banner hidden">
+                ⚠️ MODO TEMPORÁRIO: Este chat será apagado ao sair.
+            </div>
+
+            <div id="room-settings-modal" class="modal-pop hidden">
+                <div class="modal-content settings-content">
+                    <h4>Configuração da Sala</h4>
+                    <div class="settings-option">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="check-ephemeral-room"> 
+                            <span class="checkmark"></span>
+                            Apagar sala quando todos saírem
+                        </label>
+                    </div>
+                    <div class="separator-line"></div>
+                    <p class="danger-text">Zona de Perigo:</p>
+                    <button id="btn-nuke-room" class="btn-danger full-width">☢️ DESTRUIR AGORA</button>
+                    <button id="btn-close-settings" class="btn-secondary">Fechar</button>
+                </div>
+            </div>
+
+            <div id="users-overlay" class="users-dropdown hidden">
+                <h4>Operadores na Sala</h4>
+                <ul id="users-list"></ul>
+            </div>
+
+            <div id="messages-area"></div>
+
+            <div id="reply-preview" class="hidden">
+                <span id="reply-text">Respondendo...</span>
+                <button id="btn-cancel-reply">✖</button>
+            </div>
+
+            <div class="chat-input-area">
+                <input type="text" id="message-input" placeholder="Mensagem..." autocomplete="off">
+                <button id="btn-send">Enviar ➤</button>
+            </div>
+        </section>
+
+    </div>
+
+    <div id="email-login-modal" class="screen-overlay hidden">
+        <div class="custom-modal-box">
+            <h3>ACESSO MANUAL</h3>
+            <p>Entre com suas credenciais.</p>
+            <input type="email" id="login-email-input" placeholder="Seu E-mail">
+            <input type="password" id="login-pass-input" placeholder="Sua Senha">
+            <div class="modal-buttons">
+                <button id="btn-cancel-email-login" class="btn-secondary">Cancelar</button>
+                <button id="btn-confirm-email-login" class="btn-primary">Entrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="guest-nick-modal" class="screen-overlay hidden">
+        <div class="custom-modal-box">
+            <h3>NICKNAME TEMPORÁRIO</h3>
+            <p>Crie um nome para acessar:</p>
+            <input type="text" id="guest-nickname-input" placeholder="Ex: Visitante01" maxlength="15">
+            <button id="btn-confirm-guest-nick" class="btn-primary">Continuar</button>
+        </div>
+    </div>
+
+    <div id="temp-warning-modal" class="screen-overlay hidden">
+        <div class="custom-modal-box warning-box">
+            <div class="warning-circle"><span class="warning-icon">!</span></div>
+            <h3>ATENÇÃO</h3>
+            <p>Sala temporária! Após sua saída, se não restar ninguém, esse chat será apagado.</p>
+            <button id="btn-temp-ok" class="btn-primary">OK</button>
+        </div>
+    </div>
+
+    <div id="profile-modal" class="screen-overlay hidden">
+        <div class="custom-modal-box wide-box">
+            <h3>PERFIL DE OPERADOR</h3>
+            <div class="profile-section">
+                <label>Codinome (Alterar a cada 7 dias):</label>
+                <div class="input-group">
+                    <input type="text" id="edit-nickname-input" placeholder="Novo Nick">
+                    <button id="btn-update-nick" class="btn-primary small-btn">Salvar</button>
+                </div>
+                <p id="nick-error-msg" class="danger-text hidden"></p>
+            </div>
+            <div class="profile-section">
+                <label>Credencial de Acesso:</label>
+                <p class="tiny-help-text" style="text-align: left; margin-bottom: 5px;">Defina uma senha para logar sem o Google.</p>
+                <div class="input-group">
+                    <input type="password" id="link-password-input" placeholder="Nova Senha de Acesso">
+                    <button id="btn-link-password" class="btn-secondary small-btn">Definir</button>
+                </div>
+            </div>
+            <div class="separator-line"></div>
+            <h3>MEUS CANAIS</h3>
+            <div id="my-rooms-list" class="rooms-list-container"><p>Carregando...</p></div>
+            <button id="btn-close-profile" class="btn-secondary">Fechar</button>
+        </div>
+    </div>
+
+    <div id="change-pass-modal" class="screen-overlay hidden">
+        <div class="custom-modal-box">
+            <h3>NOVA SENHA</h3>
+            <p>Defina a nova chave para <span id="target-room-name" class="highlight-text">---</span></p>
+            <input type="password" id="new-room-pass" placeholder="Nova Senha">
+            <div class="modal-buttons">
+                <button id="btn-cancel-pass" class="btn-secondary">Cancelar</button>
+                <button id="btn-confirm-pass" class="btn-primary">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="success-modal" class="screen-overlay hidden">
+        <div class="custom-modal-box success-box">
+            <div class="success-circle"><span class="success-icon">✓</span></div>
+            <h3>CONCLUÍDO</h3>
+            <p id="success-msg">Operação realizada.</p>
+            <button id="btn-success-ok" class="btn-primary">OK</button>
+        </div>
+    </div>
+
+    <div id="custom-modal" class="screen-overlay hidden">
+        <div class="custom-modal-box">
+            <h3 id="modal-title">ALERTA</h3>
+            <p id="modal-msg">Mensagem...</p>
+            <div class="modal-buttons">
+                <button id="modal-btn-cancel" class="btn-secondary hidden">Cancelar</button>
+                <button id="modal-btn-ok" class="btn-primary">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <footer id="main-footer">
+        <div class="footer-content">
+            <span class="footer-text">Criado por</span>
+            <a href="https://github.com/Hardjackers" target="_blank" class="btn-creator">
+                <span class="icon">github</span> Hardjackers
+            </a>
+            <span class="footer-subtext">Conecte com o criador</span>
+        </div>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
