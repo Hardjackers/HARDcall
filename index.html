@@ -11,6 +11,10 @@
 </head>
 <body>
 
+    <audio id="sfx-click" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.m4a" preload="auto"></audio>
+    <audio id="sfx-message" src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.m4a" preload="auto"></audio>
+    <audio id="sfx-login" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.m4a" preload="auto"></audio>
+
     <div id="app-container">
         
         <section id="login-screen" class="screen active">
@@ -110,6 +114,15 @@
             <div id="room-settings-modal" class="modal-pop hidden">
                 <div class="modal-content settings-content">
                     <h4>Configuração da Sala</h4>
+                    
+                    <div class="settings-option">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="check-mute-sound"> 
+                            <span class="checkmark"></span>
+                            Silenciar Notificações
+                        </label>
+                    </div>
+
                     <div class="settings-option">
                         <label class="checkbox-container">
                             <input type="checkbox" id="check-ephemeral-room"> 
@@ -147,21 +160,11 @@
     <div id="legal-modal" class="screen-overlay hidden">
         <div class="custom-modal-box wide-box legal-box">
             <button id="btn-close-legal" class="close-x-btn">✖</button>
-            
             <h3>TERMOS DE USO & PRIVACIDADE</h3>
             <div class="legal-text-content">
-                <p><strong>1. SOBRE O SERVIÇO</strong><br>
-                O HARDcall é um portal de comunicação segura desenvolvido por "Hardjackers". O serviço oferece salas de bate-papo criptografadas com funcionalidades de autodestruição.</p>
-                
-                <p><strong>2. PRIVACIDADE E DADOS</strong><br>
-                O HARDcall utiliza serviços de nuvem (Google Firebase) para intermediar as mensagens. As mensagens são processadas com criptografia de ponta a ponta (AES). O sistema é volátil: salas temporárias ou com autodestruição ativada têm seu conteúdo excluído permanentemente assim que o último participante sai.</p>
-                
-                <p><strong>3. RESPONSABILIDADES</strong><br>
-                Você é o único responsável pela segurança da sua senha e das salas que criar. É proibido utilizar o HARDcall para atividades ilícitas. O desenvolvedor não tem acesso ao conteúdo das mensagens e não se responsabiliza pelo teor das conversas.</p>
-                
-                <p><strong>4. ISENÇÃO DE GARANTIAS</strong><br>
-                O software é fornecido "como está" (as-is), sem garantias. O desenvolvedor não se responsabiliza por falhas de conexão ou perda de dados.</p>
-                
+                <p><strong>1. SOBRE O SERVIÇO</strong><br>HARDcall é um portal de comunicação segura...</p>
+                <p><strong>2. PRIVACIDADE E DADOS</strong><br>O HARDcall utiliza serviços de nuvem...</p>
+                <p><strong>3. RESPONSABILIDADES</strong><br>Você é o único responsável...</p>
                 <p><em>© 2026 Hardjackers. Todos os direitos reservados.</em></p>
             </div>
         </div>
@@ -211,9 +214,8 @@
             </div>
             <div class="profile-section">
                 <label>Credencial de Acesso:</label>
-                <p class="tiny-help-text" style="text-align: left; margin-bottom: 5px;">Defina uma senha para logar sem o Google.</p>
                 <div class="input-group">
-                    <input type="password" id="link-password-input" placeholder="Nova Senha de Acesso">
+                    <input type="password" id="link-password-input" placeholder="Nova Senha">
                     <button id="btn-link-password" class="btn-secondary small-btn">Definir</button>
                 </div>
             </div>
