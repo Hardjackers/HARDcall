@@ -25,6 +25,8 @@ let targetRoomForPass = null;
 let isGuest = false;
 let isMuted = localStorage.getItem('hardcall_mute') === 'true';
 let connectionTime = 0;
+let guestTempRoom = null;
+let guestTempPass = null;
 
 const screens = {
     login: document.getElementById('login-screen'),
@@ -58,7 +60,6 @@ function showScreen(screenName) {
     Object.values(screens).forEach(s => s.classList.add('hidden'));
     screens[screenName].classList.remove('hidden');
     screens[screenName].classList.add('active');
-
     const footer = document.getElementById('main-footer');
     if (screenName === 'chat') {
         footer.classList.add('hidden');
@@ -123,12 +124,6 @@ setupEnterKey(['new-room-pass'], 'btn-confirm-pass');
 setupEnterKey(['link-password-input'], 'btn-link-password');
 setupEnterKey(['edit-nickname-input'], 'btn-update-nick');
 
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && currentRoom) {
-        leaveRoom();
-    }
-});
-
 document.getElementById('btn-google-login').addEventListener('click', () => {
     isGuest = false;
     signInWithPopup(auth, provider).catch((error) => showCustomAlert("Erro Login", error.message));
@@ -153,14 +148,11 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         const savedRoom = sessionStorage.getItem('hardcall_room');
         const savedKey = sessionStorage.getItem('hardcall_key');
-
         if (user.isAnonymous && !isGuest && !savedRoom) {
             signOut(auth);
             return;
         }
-
         currentUser = user;
-
         if (savedRoom && savedKey) {
             enterRoom(savedRoom, savedKey);
         } else {
@@ -186,9 +178,6 @@ async function checkFirstTimeSetup(user) {
     }
 }
 
-let guestTempRoom = null;
-let guestTempPass = null;
-
 document.getElementById('btn-guest-enter').addEventListener('click', () => {
     const code = document.getElementById('guest-room-code').value.toUpperCase();
     const pass = document.getElementById('guest-room-pass').value;
@@ -201,9 +190,26 @@ document.getElementById('btn-guest-enter').addEventListener('click', () => {
     .catch((error) => showCustomAlert("Erro Convidado", error.message));
 });
 
-document.getElementById('btn-confirm-guest-nick').addEventListener('click', () => {
+async function isNicknameTakenInRoom(roomId, nick) {
+    const snapshot = await get(ref(db, `rooms/${roomId}/users`));
+    let taken = false;
+    if (snapshot.exists()) {
+        snapshot.forEach(child => {
+            if (child.val().nickname && child.val().nickname.toLowerCase() === nick.toLowerCase()) {
+                taken = true;
+            }
+        });
+    }
+    return taken;
+}
+
+document.getElementById('btn-confirm-guest-nick').addEventListener('click', async () => {
     const nick = document.getElementById('guest-nickname-input').value;
     if(nick.length < 3) return showCustomAlert("Erro", "Nick muito curto.");
+    
+    const taken = await isNicknameTakenInRoom(guestTempRoom, nick);
+    if (taken) return showCustomAlert("Acesso Negado", "Já existe um operador com este nome nesta frequência.");
+
     currentUser.nickname = nick;
     document.getElementById('guest-nick-modal').classList.add('hidden');
     document.getElementById('temp-warning-modal').classList.remove('hidden');
@@ -239,7 +245,7 @@ document.getElementById('btn-save-setup').addEventListener('click', async () => 
 });
 
 async function saveNickname(nick, isSetup) {
-    if (nick.length < 3) return showCustomAlert("Erro", "Nick curto.");
+    if (nick.length < 3) return showCustomAlert("Erro", "Nick muito curto.");
     if (!isSetup && !isGuest) {
         const now = Date.now();
         const lastChange = currentUser.lastNickChange || 0;
@@ -247,15 +253,21 @@ async function saveNickname(nick, isSetup) {
         if (now - lastChange < sevenDaysMs) {
             const daysLeft = Math.ceil((sevenDaysMs - (now - lastChange)) / (1000 * 60 * 60 * 24));
             const errorMsg = document.getElementById('nick-error-msg');
-            errorMsg.innerText = `Aguarde ${daysLeft} dias.`;
-            errorMsg.classList.remove('hidden');
+            if (errorMsg) {
+                errorMsg.innerText = `Aguarde ${daysLeft} dias para mudar novamente.`;
+                errorMsg.classList.remove('hidden');
+            }
             return;
         }
     }
     const usersSnap = await get(ref(db, 'users'));
     let exists = false;
-    usersSnap.forEach(child => { if(child.val().nickname === nick && child.key !== currentUser.uid) exists = true; });
-    if(exists) return showCustomAlert("Erro", "Codinome em uso.");
+    usersSnap.forEach(child => { 
+        if(child.val().nickname && child.val().nickname.toLowerCase() === nick.toLowerCase() && child.key !== currentUser.uid) {
+            exists = true;
+        } 
+    });
+    if(exists) return showCustomAlert("Erro", "Este codinome já está sendo usado por outro operador.");
     if(!isGuest) {
         await update(ref(db, 'users/' + currentUser.uid), { nickname: nick, lastNickChange: serverTimestamp() });
         currentUser.lastNickChange = Date.now();
@@ -264,9 +276,11 @@ async function saveNickname(nick, isSetup) {
     if(isSetup) {
         startLobby();
     } else {
-        showSuccessModal("Codinome atualizado!");
-        document.getElementById('display-name').innerText = nick;
-        document.getElementById('nick-error-msg').classList.add('hidden');
+        showSuccessModal("Codinome atualizado com sucesso!");
+        const display = document.getElementById('display-name');
+        if (display) display.innerText = nick;
+        const errorMsg = document.getElementById('nick-error-msg');
+        if (errorMsg) errorMsg.classList.add('hidden');
     }
 }
 
@@ -293,7 +307,6 @@ document.getElementById('btn-update-nick').addEventListener('click', () => {
 document.getElementById('btn-link-password').onclick = async () => {
     const newPass = document.getElementById('link-password-input').value;
     if (newPass.length < 6) return showCustomAlert("Erro", "Senha deve ter 6+ dígitos.");
-
     try {
         await updatePassword(auth.currentUser, newPass);
         showSuccessModal("Senha atualizada com sucesso!");
@@ -365,7 +378,7 @@ document.getElementById('btn-create-room').addEventListener('click', async () =>
     const roomSnap = await get(ref(db, 'rooms/' + code));
     if (roomSnap.exists()) return showCustomAlert("Erro", "Sala existente.");
     const passHash = CryptoJS.SHA256(pass).toString();
-    set(ref(db, 'rooms/' + code), {
+    await set(ref(db, 'rooms/' + code), {
         createdAt: serverTimestamp(),
         config: { isEphemeral: isEphemeral, passHash: passHash, ownerId: currentUser.uid }
     });
@@ -391,14 +404,11 @@ function enterRoom(roomId, password) {
     roomKey = password.trim() === "" ? "HARDCALL_PUBLIC" : password;
     sessionStorage.setItem('hardcall_room', roomId);
     sessionStorage.setItem('hardcall_key', password);
-
     connectionTime = Date.now(); 
-
     document.getElementById('room-id-display').innerText = "Freq: " + roomId;
     document.getElementById('messages-area').innerHTML = '';
     document.getElementById('room-settings-modal').classList.add('hidden');
     document.getElementById('users-overlay').classList.add('hidden');
-
     const tempWarning = document.getElementById('temp-room-warning');
     const settingsBtn = document.getElementById('btn-room-settings');
     if (isGuest) {
@@ -408,17 +418,11 @@ function enterRoom(roomId, password) {
         tempWarning.classList.add('hidden');
         settingsBtn.classList.remove('hidden');
     }
-
     showScreen('chat');
     setupPresence(roomId);
     loadMessages(roomId);
     syncRoomSettings(roomId);
     playSound('login');
-
-    window.visualViewport.addEventListener('resize', () => {
-        const area = document.getElementById('messages-area');
-        area.scrollTop = area.scrollHeight;
-    });
 }
 
 window.addEventListener('pagehide', () => {
@@ -426,18 +430,17 @@ window.addEventListener('pagehide', () => {
 });
 
 document.getElementById('btn-leave-room').addEventListener('click', leaveRoom);
-function leaveRoom() {
+
+async function leaveRoom() {
     if (!currentRoom) return;
+    await checkAndDestroy(currentRoom); 
     sessionStorage.removeItem('hardcall_room');
     sessionStorage.removeItem('hardcall_key');
-
-    checkAndDestroy(currentRoom);
-    if (userStatusRef) remove(userStatusRef);
+    if (userStatusRef) await remove(userStatusRef);
     currentRoom = null;
     roomKey = null;
     if(isGuest) {
-        signOut(auth);
-        location.reload();
+        signOut(auth).then(() => location.reload());
     } else {
         showScreen('lobby');
     }
@@ -474,9 +477,7 @@ document.getElementById('btn-close-settings').addEventListener('click', () => {
 document.getElementById('btn-nuke-room').addEventListener('click', () => {
     showCustomConfirm("ZONA DE PERIGO", "☢️ DESTRUIR SALA?", (confirmed) => {
         if(confirmed) {
-            playSound('explosion'); // <--- O som toca aqui!
-
-            // Pequeno delay para o usuário ouvir o som antes da tela mudar
+            playSound('explosion');
             setTimeout(() => {
                 remove(ref(db, 'rooms/' + currentRoom));
                 leaveRoom();
@@ -508,14 +509,10 @@ function setupPresence(roomId) {
 async function checkAndDestroy(roomId) {
     const roomRef = ref(db, 'rooms/' + roomId);
     const roomSnap = await get(roomRef);
-    
     if (roomSnap.exists()) {
         const data = roomSnap.val();
         const users = data.users || {};
         const userCount = Object.keys(users).length;
-
-        // Se você for o ÚLTIMO na sala (contando com você ainda nela)
-        // e a sala for temporária, deleta tudo.
         if (userCount <= 1 && data.config && data.config.isEphemeral) {
             await remove(roomRef);
         }
@@ -545,10 +542,7 @@ function sendMessage() {
 
 function loadMessages(roomId) {
     const messagesRef = ref(db, 'rooms/' + roomId + '/messages');
-    
-    // Isso aqui limpa a memória do navegador para não duplicar
     off(messagesRef); 
-    
     onChildAdded(messagesRef, (snapshot) => {
         const data = snapshot.val();
         if(data) renderMessage(data);
@@ -564,11 +558,9 @@ function renderMessage(data) {
     if (!decryptedText) return;
     const div = document.createElement('div');
     const isMe = data.sender === currentUser.nickname;
-
     if (!isMe && data.timestamp > (connectionTime + 5000)) {
         playSound('message'); 
     }
-
     div.classList.add('msg', isMe ? 'sent' : 'received');
     div.addEventListener('dblclick', () => startReply(data.sender, decryptedText));
     const date = new Date(data.timestamp || Date.now());
@@ -585,15 +577,14 @@ function startReply(sender, text) {
     document.getElementById('reply-text').innerText = `Respondendo a ${sender}: "${replyingTo.text}"`;
     document.getElementById('message-input').focus();
 }
+
 document.getElementById('btn-cancel-reply').addEventListener('click', () => {
     replyingTo = null;
     document.getElementById('reply-preview').classList.add('hidden');
 });
 
-// Função para cancelar o login de convidado e fechar o modal
 function closeGuestModal() {
     document.getElementById('guest-nick-modal').classList.add('hidden');
-    // Como ele já iniciou o login anônimo no Firebase, fazemos logout para limpar
     signOut(auth); 
     isGuest = false;
 }
