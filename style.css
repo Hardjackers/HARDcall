@@ -6,13 +6,10 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-/* CORREÇÃO MOBILE: Usa 100dvh para ignorar a barra do navegador */
 body {
     background-color: var(--bg-color); color: var(--text-color); font-family: var(--font-ui);
     height: 100dvh; overflow: hidden; display: flex; flex-direction: column;
 }
-
-/* Proteção Leve contra Seleção */
 body.no-select { user-select: none; -webkit-user-select: none; }
 
 #app-container { flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; }
@@ -21,15 +18,13 @@ body.no-select { user-select: none; -webkit-user-select: none; }
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     display: flex; flex-direction: column; background-color: var(--bg-color);
     transition: opacity 0.3s ease; z-index: 1;
-    align-items: center; justify-content: center; /* CENTRALIZAR TUDO */
+    align-items: center; justify-content: center;
 }
 .screen.hidden { opacity: 0; pointer-events: none; z-index: -1; }
 .screen.active { opacity: 1; pointer-events: auto; z-index: 10; }
-
-/* CHAT TELA CHEIA (Exceção da centralização) */
 #chat-screen { justify-content: flex-start; align-items: stretch; }
 
-/* LOGIN & SETUP */
+/* Login */
 .login-box, .setup-box {
     width: 90%; max-width: 380px; padding: 2rem;
     background: var(--surface-color); border: 1px solid #30363d; border-radius: 8px; text-align: center;
@@ -64,14 +59,8 @@ input:focus { outline: none; border-color: var(--primary-color); }
 
 .top-bar { width: 100%; padding: 10px 15px; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; background: var(--surface-color); }
 .user-info-container { display: flex; align-items: center; gap: 10px; }
-.status-badge-inline {
-    background: none; border: 1px solid var(--success-color); color: var(--success-color);
-    padding: 4px 8px; font-size: 0.7rem; border-radius: 4px; font-weight: bold; letter-spacing: 0.5px;
-}
-.profile-btn {
-    background: transparent; border: 1px solid #333; padding: 4px 8px; border-radius: 4px;
-    display: flex; align-items: center; gap: 8px; color: var(--text-color); font-size: 0.9rem;
-}
+.status-badge-inline { background: none; border: 1px solid var(--success-color); color: var(--success-color); padding: 4px 8px; font-size: 0.7rem; border-radius: 4px; font-weight: bold; letter-spacing: 0.5px; }
+.profile-btn { background: transparent; border: 1px solid #333; padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; gap: 8px; color: var(--text-color); font-size: 0.9rem; }
 .profile-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
 .edit-icon { font-size: 0.8rem; opacity: 0.6; }
 
@@ -87,23 +76,14 @@ input:focus { outline: none; border-color: var(--primary-color); }
 .users-counter:hover { border-color: var(--primary-color); box-shadow: 0 0 10px rgba(0, 243, 255, 0.1); }
 .users-counter .dot { color: var(--success-color); }
 
-.users-dropdown {
-    position: absolute; top: 60px; right: 50px;
-    background: var(--surface-color); border: 1px solid var(--primary-color);
-    padding: 15px; border-radius: 8px; min-width: 200px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.8); z-index: 200;
-}
+.users-dropdown { position: absolute; top: 60px; right: 50px; background: var(--surface-color); border: 1px solid var(--primary-color); padding: 15px; border-radius: 8px; min-width: 200px; box-shadow: 0 5px 20px rgba(0,0,0,0.8); z-index: 200; }
 .users-dropdown h4 { color: var(--secondary-color); font-size: 0.8rem; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px; }
 .users-dropdown ul { list-style: none; }
 .users-dropdown li { padding: 5px 0; border-bottom: 1px solid #222; font-size: 0.9rem; color: var(--text-color); }
 .users-dropdown li:last-child { border-bottom: none; }
 .users-dropdown .me { color: var(--primary-color); font-weight: bold; }
 
-.temp-warning-banner {
-    width: 100%; background-color: rgba(255, 62, 62, 0.2); border-bottom: 1px solid var(--danger-color);
-    color: var(--danger-color); text-align: center; padding: 10px; font-size: 0.8rem; font-weight: bold; letter-spacing: 1px;
-}
-
+.temp-warning-banner { width: 100%; background-color: rgba(255, 62, 62, 0.2); border-bottom: 1px solid var(--danger-color); color: var(--danger-color); text-align: center; padding: 10px; font-size: 0.8rem; font-weight: bold; letter-spacing: 1px; }
 .icon-btn { background: none; border: 1px solid transparent; font-size: 1.2rem; cursor: pointer; padding: 5px; border-radius: 50%; transition: all 0.3s; }
 .icon-btn:hover { background: rgba(0, 243, 255, 0.1); border-color: var(--primary-color); transform: rotate(90deg); }
 
@@ -114,13 +94,13 @@ input:focus { outline: none; border-color: var(--primary-color); }
 .msg .sender { display: block; font-size: 0.7rem; color: var(--secondary-color); margin-bottom: 4px; font-family: var(--font-mono); }
 .msg .time { font-size: 0.65rem; color: #555; float: right; margin-left: 10px; margin-top: 5px; }
 
-/* FIX MOBILE: Garante que o input fique visível */
 .chat-input-area { width: 100%; padding: 10px; background: var(--surface-color); border-top: 1px solid #30363d; display: flex; gap: 10px; flex-shrink: 0; }
 #message-input { margin-bottom: 0; flex: 1; }
 #btn-send { padding: 0 20px; background: var(--primary-color); color: #000; border-radius: 4px; }
 
+/* MODALS */
 .screen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-.custom-modal-box { background: var(--surface-color); border: 1px solid var(--primary-color); padding: 25px; border-radius: 8px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 0 30px rgba(0, 243, 255, 0.2); }
+.custom-modal-box { background: var(--surface-color); border: 1px solid var(--primary-color); padding: 25px; border-radius: 8px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 0 30px rgba(0, 243, 255, 0.2); position: relative; }
 .wide-box { max-width: 500px; }
 .warning-box { border-color: var(--danger-color); box-shadow: 0 0 30px rgba(255, 62, 62, 0.2); }
 .warning-circle { width: 60px; height: 60px; border: 3px solid var(--danger-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; }
@@ -149,9 +129,39 @@ input:focus { outline: none; border-color: var(--primary-color); }
 .btn-mini { padding: 4px 8px; font-size: 0.7rem; background: transparent; border: 1px solid var(--secondary-color); color: var(--secondary-color); border-radius: 3px; }
 .btn-mini:hover { border-color: var(--primary-color); color: var(--primary-color); }
 
+/* RODAPÉ E BOTÃO INFO */
 #main-footer { padding: 25px 20px; text-align: center; background: var(--bg-color); border-top: 1px solid #1a1a1d; font-size: 0.8rem; color: var(--secondary-color); margin-top: auto; width: 100%; }
 .footer-content { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .btn-creator { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; background: #0d1117; border: 1px solid #30363d; border-radius: 20px; color: var(--text-color); text-decoration: none; font-family: var(--font-mono); transition: all 0.3s ease; }
 .btn-creator:hover { border-color: var(--primary-color); color: var(--primary-color); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 243, 255, 0.1); }
 
+/* Estilo do Botão Informação */
+.btn-legal {
+    background: transparent; border: none; color: #555; font-size: 0.75rem;
+    margin-top: 5px; cursor: pointer; text-decoration: underline; transition: color 0.2s;
+}
+.btn-legal:hover { color: var(--primary-color); }
+
+/* Estilo do Modal Legal */
+.legal-box { text-align: left; max-height: 80vh; display: flex; flex-direction: column; }
+.legal-text-content {
+    overflow-y: auto; max-height: 60vh; padding-right: 10px; margin-top: 10px;
+    font-size: 0.85rem; line-height: 1.5; color: #ccc;
+}
+.legal-text-content p { margin-bottom: 12px; }
+.close-x-btn {
+    position: absolute; top: 10px; right: 10px;
+    background: transparent; border: none; color: var(--danger-color);
+    font-size: 1.5rem; font-weight: bold; cursor: pointer;
+}
+.close-x-btn:hover { transform: scale(1.1); }
+
 @media (min-width: 768px) { .lobby-content { flex-direction: row; justify-content: center; align-items: flex-start; } }
+@media (max-width: 768px), (max-height: 700px) {
+    .login-box, .setup-box { padding: 1.5rem; width: 95%; max-width: 350px; }
+    h1 { font-size: 1.5rem; margin-bottom: 1rem; }
+    .btn-primary, .btn-secondary, input { padding: 10px; font-size: 0.85rem; }
+    .lobby-content { padding: 10px; }
+    .panel { padding: 15px; }
+    .msg { font-size: 0.85rem; }
+}
