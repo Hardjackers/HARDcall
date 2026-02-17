@@ -1,4 +1,3 @@
-@@ -1,588 +1,614 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously, EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, set, push, onChildAdded, onDisconnect, serverTimestamp, remove, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -165,15 +164,11 @@ onAuthStateChanged(auth, async (user) => {
         if (savedRoom && savedKey) {
             enterRoom(savedRoom, savedKey);
         } else {
-            if(user.isAnonymous) { 
-                isGuest = true; 
-                showScreen('lobby');
-            } else { 
-                checkFirstTimeSetup(user); 
-            }
+            if(user.isAnonymous) { isGuest = true; } 
+            else { checkFirstTimeSetup(user); }
         }
     } else {
-        showScreen('login'); // Corrigido para 'login'
+        showScreen('login');
     }
 });
 
@@ -617,4 +612,3 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
-
