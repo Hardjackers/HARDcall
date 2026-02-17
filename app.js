@@ -1,9 +1,9 @@
-/* HARDcall v17 - Legal Info Modal */
+/* HARDcall v19 - Sound FX & Mute Toggle */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously, EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, set, push, onChildAdded, onDisconnect, serverTimestamp, remove, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-// --- 1. CONFIGURAÇÃO (COLE SUAS CHAVES AQUI!) ---
+// --- 1. CONFIGURAÇÃO ---
 const firebaseConfig = {
     apiKey: "AIzaSyCUi-rXHv_Kxe4ePQmXfeVPN-P6RktV5Ok",
     authDomain: "hardcall-501d4.firebaseapp.com",
@@ -26,14 +26,37 @@ let userStatusRef = null;
 let replyingTo = null;
 let targetRoomForPass = null;
 let isGuest = false;
+let isMuted = localStorage.getItem('hardcall_mute') === 'true'; // Carrega preferência
 
-// --- 3. UI HELPER FUNCTIONS ---
+// --- 3. UI & SOM ---
 const screens = {
     login: document.getElementById('login-screen'),
     setup: document.getElementById('setup-screen'),
     lobby: document.getElementById('lobby-screen'),
     chat: document.getElementById('chat-screen')
 };
+
+// Configura o Checkbox de Mute ao carregar
+const muteCheckbox = document.getElementById('check-mute-sound');
+muteCheckbox.checked = isMuted;
+muteCheckbox.addEventListener('change', () => {
+    isMuted = muteCheckbox.checked;
+    localStorage.setItem('hardcall_mute', isMuted); // Salva preferência
+});
+
+function playSound(type) {
+    if (isMuted) return; // Se estiver mutado, não toca nada
+    const audio = document.getElementById('sfx-' + type);
+    if (audio) {
+        audio.currentTime = 0; // Reinicia o som se já estiver tocando
+        audio.play().catch(e => console.log("Interação necessária para som"));
+    }
+}
+
+// Adiciona som de click em TODOS os botões
+document.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => playSound('click'));
+});
 
 function showScreen(screenName) {
     Object.values(screens).forEach(s => s.classList.remove('active', 'hidden'));
@@ -75,7 +98,7 @@ function showSuccessModal(msg) {
     document.getElementById('btn-success-ok').onclick = () => { modal.classList.add('hidden'); };
 }
 
-// --- NOVO: LÓGICA DO MODAL LEGAL ---
+// --- MODAL LEGAL ---
 document.getElementById('btn-open-legal').addEventListener('click', () => {
     document.getElementById('legal-modal').classList.remove('hidden');
 });
@@ -83,7 +106,7 @@ document.getElementById('btn-close-legal').addEventListener('click', () => {
     document.getElementById('legal-modal').classList.add('hidden');
 });
 
-// --- FUNÇÃO MÁGICA DO ENTER ---
+// --- FUNÇÃO ENTER ---
 function setupEnterKey(inputIds, buttonId) {
     inputIds.forEach(id => {
         const el = document.getElementById(id);
@@ -96,8 +119,6 @@ function setupEnterKey(inputIds, buttonId) {
         }
     });
 }
-
-// Aplicando o Enter em tudo:
 setupEnterKey(['guest-room-code', 'guest-room-pass'], 'btn-guest-enter'); 
 setupEnterKey(['login-email-input', 'login-pass-input'], 'btn-confirm-email-login');
 setupEnterKey(['setup-nickname'], 'btn-save-setup');
@@ -108,7 +129,7 @@ setupEnterKey(['new-room-pass'], 'btn-confirm-pass');
 setupEnterKey(['link-password-input'], 'btn-link-password');
 setupEnterKey(['edit-nickname-input'], 'btn-update-nick');
 
-// --- BOTÃO PÂNICO (ESC) ---
+// --- BOTÃO PÂNICO ---
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && currentRoom) {
         leaveRoom();
@@ -260,6 +281,7 @@ async function saveNickname(nick, isSetup) {
 }
 
 function startLobby() {
+    playSound('login'); // Som de sucesso ao entrar
     document.getElementById('display-name').innerText = currentUser.nickname;
     showScreen('lobby');
 }
@@ -383,7 +405,6 @@ document.getElementById('btn-join-room').addEventListener('click', async () => {
 function enterRoom(roomId, password) {
     currentRoom = roomId;
     roomKey = password.trim() === "" ? "HARDCALL_PUBLIC" : password;
-    
     sessionStorage.setItem('hardcall_room', roomId);
     sessionStorage.setItem('hardcall_key', password);
 
@@ -406,6 +427,7 @@ function enterRoom(roomId, password) {
     setupPresence(roomId);
     loadMessages(roomId);
     syncRoomSettings(roomId);
+    playSound('login'); // Som de conexão segura
     
     window.visualViewport.addEventListener('resize', () => {
         const area = document.getElementById('messages-area');
@@ -420,7 +442,6 @@ window.addEventListener('pagehide', () => {
 document.getElementById('btn-leave-room').addEventListener('click', leaveRoom);
 function leaveRoom() {
     if (!currentRoom) return;
-    
     sessionStorage.removeItem('hardcall_room');
     sessionStorage.removeItem('hardcall_key');
 
@@ -523,6 +544,7 @@ function sendMessage() {
     }
     push(ref(db, 'rooms/' + currentRoom + '/messages'), msgData);
     input.value = '';
+    playSound('click'); // Som de envio
 }
 
 function loadMessages(roomId) {
@@ -542,6 +564,12 @@ function renderMessage(data) {
     if (!decryptedText) return;
     const div = document.createElement('div');
     const isMe = data.sender === currentUser.nickname;
+    
+    // SÓ TOCA SE FOR MENSAGEM DOS OUTROS (Para não ouvir o próprio som 2x)
+    if (!isMe) {
+        playSound('message'); 
+    }
+
     div.classList.add('msg', isMe ? 'sent' : 'received');
     div.addEventListener('dblclick', () => startReply(data.sender, decryptedText));
     const date = new Date(data.timestamp || Date.now());
