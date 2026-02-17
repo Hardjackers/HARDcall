@@ -1,40 +1,25 @@
 # HARDcall 🔒 🔊
+**Portal de Comunicação Segura | v31.0 - PWA & Audio Update**
 
-**Secure Communication Portal | v30.0 - The Sound Update**
-
-📡 **Sobre o Projeto**
-O **HARDcall** é uma plataforma de comunicação focada em privacidade e segurança. Desenvolvido para oferecer canais de bate-papo rápidos e seguros com estética Cyberpunk. Esta versão v20.0 introduz uma camada imersiva de áudio e correções críticas de usabilidade.
+📡 **Sobre o Projeto** O **HARDcall** é uma plataforma de comunicação focada em privacidade e segurança, desenvolvida por **Hardjackers**. Criado para oferecer canais de bate-papo rápidos e seguros com estética **Cyberpunk**, o sistema garante que a comunicação seja privada por padrão.
 
 🚀 **Funcionalidades Principais**
+* **🔒 Criptografia Militar (AES):** Mensagens criptografadas localmente no navegador antes de qualquer envio.
+* **💣 Autodestruição de Salas:** Salas temporárias que apagam todos os rastros do banco de dados após a saída do último participante.
+* **🕵️ Acesso Híbrido:** Suporte a Login via Google/E-mail ou Modo Fantasma (Convidado) totalmente anônimo.
+* **🔊 Sonorização Inteligente:** Feedback sonoro imersivo com lógica anti-flood para ignorar mensagens antigas ao entrar.
+* **📱 Suporte PWA:** Instale o HARDcall como um aplicativo nativo no seu smartphone através do navegador.
+* **🎨 UI Cyberpunk v3:** Interface Neon responsiva com suporte a teclados mobile e atalhos globais (ESC).
 
-* **🔒 Criptografia Militar (AES):** Mensagens criptografadas no navegador antes do envio.
-* **💣 Autodestruição de Salas:** Salas temporárias que apagam todos os rastros após o último participante sair.
-* **🕵️ Acesso Híbrido:** Login via Google/Email ou Modo Fantasma (Guest) totalmente anônimo.
-* **🔊 Sistema de Sonorização Inteligente (NOVO):** Feedback sonoro para cliques, login e recebimento de mensagens (com lógica anti-flood para mensagens antigas).
-* **🎨 UI Cyberpunk v2:** Interface responsiva com tema Neon, agora com suporte total a teclados mobile e botões de pânico (ESC).
-
-🔄 **Histórico de Atualizações (v20.0)**
-
-* **🔊 Audio Engine:** Adição de efeitos sonoros (SFX) em 8-bit.
-* **🔇 Sound Control:** Opção de silenciar notificações salva no navegador (localStorage).
-* **🛡️ Fix Popup:** Correção do modal de Nickname (agora permite fechar/cancelar via ESC ou clique fora).
-* **⌛ Anti-Flood:** Sistema que impede sons de mensagens antigas ao entrar na sala.
-* **📱 Mobile Fix:** Estabilização do layout `100dvh` para evitar bugs com teclado virtual.
+🔄 **Histórico Recente (v31.0)**
+* **📦 PWA Ready:** Implementação de `manifest.json` e Service Workers para instalação mobile.
+* **🔇 Controle de Áudio:** Opção de silenciar notificações persistida via `localStorage`.
+* **⌛ Anti-Flood Pro:** Sistema que impede disparos sonoros de mensagens históricas (buffer de 5 segundos).
+* **🛡️ Security Fix:** Correção na autorização de domínios e permissões de limpeza para convidados.
 
 🛠️ **Tecnologias Utilizadas**
-
 * **Frontend:** HTML5, CSS3, JavaScript (ES6+).
 * **Backend:** Google Firebase (Auth & Realtime Database).
-* **Segurança:** CryptoJS (AES-256 & SHA-256).
+* **Segurança:** CryptoJS (AES-256 e SHA-256).
 
-📸 **Screenshots**
-
-| Tela de Login | Chat Seguro |
-| :---: | :---: |
-| ![Login](screenshots/login.png) | ![Chat](screenshots/chat.png) |
-
-
-👨‍💻 **Desenvolvedor**
-Desenvolvido por **Hardjackers**. Criando soluções digitais com segurança e estilo.
-
-
+👨‍💻 **Desenvolvedor** Desenvolvido por **Hardjackers**. Criando soluções digitais com segurança e estilo.
