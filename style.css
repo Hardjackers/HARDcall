@@ -24,6 +24,7 @@ body.no-select { user-select: none; -webkit-user-select: none; }
 .screen.active { opacity: 1; pointer-events: auto; z-index: 10; }
 #chat-screen { justify-content: flex-start; align-items: stretch; }
 
+/* --- ANIMAÇÃO DE PULSO NEON (NOVO) --- */
 @keyframes neon-pulse {
     0% {
         box-shadow: 0 0 10px rgba(0, 243, 255, 0.1);
@@ -39,6 +40,7 @@ body.no-select { user-select: none; -webkit-user-select: none; }
     }
 }
 
+/* LOGIN & SETUP (Com a animação aplicada) */
 .login-box, .setup-box {
     width: 90%; max-width: 380px; padding: 2rem;
     background: var(--surface-color); 
@@ -47,6 +49,7 @@ body.no-select { user-select: none; -webkit-user-select: none; }
     box-shadow: 0 4px 20px rgba(0, 243, 255, 0.1);
     max-height: 90vh; overflow-y: auto;
 
+    /* A Mágica acontece aqui: */
 
     animation: neon-pulse 3s infinite ease-in-out;
 }
