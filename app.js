@@ -1,9 +1,7 @@
-/* HARDcall v20 - Sound Logic Fix (Anti-Flood) */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously, EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, set, push, onChildAdded, onDisconnect, serverTimestamp, remove, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-// --- 1. CONFIGURAÇÃO ---
 const firebaseConfig = {
     apiKey: "AIzaSyCUi-rXHv_Kxe4ePQmXfeVPN-P6RktV5Ok",
     authDomain: "hardcall-501d4.firebaseapp.com",
@@ -18,7 +16,6 @@ const auth = getAuth(app);
 const db = getDatabase(app);
 const provider = new GoogleAuthProvider();
 
-// --- 2. ESTADO GLOBAL ---
 let currentUser = null;
 let currentRoom = null;
 let roomKey = null;
@@ -27,9 +24,8 @@ let replyingTo = null;
 let targetRoomForPass = null;
 let isGuest = false;
 let isMuted = localStorage.getItem('hardcall_mute') === 'true';
-let connectionTime = 0; // <--- O SEGREDO DO ANTI-FLOOD
+let connectionTime = 0;
 
-// --- 3. UI & SOM ---
 const screens = {
     login: document.getElementById('login-screen'),
     setup: document.getElementById('setup-screen'),
@@ -49,11 +45,10 @@ function playSound(type) {
     const audio = document.getElementById('sfx-' + type);
     if (audio) {
         audio.currentTime = 0;
-        audio.play().catch(e => console.log("Interação necessária"));
+        audio.play().catch(e => {});
     }
 }
 
-// Som de click global
 document.querySelectorAll('button').forEach(btn => {
     btn.addEventListener('click', () => playSound('click'));
 });
@@ -72,7 +67,6 @@ function showScreen(screenName) {
     }
 }
 
-// ... (Funções de Modal mantidas iguais: showCustomAlert, showCustomConfirm, showSuccessModal) ...
 function showCustomAlert(title, msg) {
     const modal = document.getElementById('custom-modal');
     document.getElementById('modal-title').innerText = title;
@@ -118,7 +112,7 @@ function setupEnterKey(inputIds, buttonId) {
         }
     });
 }
-// ... (Chamadas setupEnterKey mantidas iguais) ...
+
 setupEnterKey(['guest-room-code', 'guest-room-pass'], 'btn-guest-enter'); 
 setupEnterKey(['login-email-input', 'login-pass-input'], 'btn-confirm-email-login');
 setupEnterKey(['setup-nickname'], 'btn-save-setup');
@@ -135,8 +129,6 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// --- 4. AUTENTICAÇÃO ---
-// ... (Listeners de login mantidos iguais) ...
 document.getElementById('btn-google-login').addEventListener('click', () => {
     isGuest = false;
     signInWithPopup(auth, provider).catch((error) => showCustomAlert("Erro Login", error.message));
@@ -194,7 +186,6 @@ async function checkFirstTimeSetup(user) {
     }
 }
 
-// ... (Lógica de Guest e Perfil mantida igual) ...
 let guestTempRoom = null;
 let guestTempPass = null;
 
@@ -280,12 +271,11 @@ async function saveNickname(nick, isSetup) {
 }
 
 function startLobby() {
-    playSound('login'); // Som 1: Logou no Lobby
+    playSound('login');
     document.getElementById('display-name').innerText = currentUser.nickname;
     showScreen('lobby');
 }
 
-// ... (Perfil e LoadRooms mantidos iguais) ...
 document.getElementById('btn-my-profile').addEventListener('click', () => {
     if(isGuest) return showCustomAlert("Restrito", "Acesso temporário não possui perfil.");
     document.getElementById('profile-modal').classList.remove('hidden');
@@ -350,6 +340,7 @@ async function loadMyRooms() {
         };
     });
 }
+
 document.getElementById('btn-cancel-pass').addEventListener('click', () => {
     document.getElementById('change-pass-modal').classList.add('hidden');
 });
@@ -406,7 +397,6 @@ function enterRoom(roomId, password) {
     sessionStorage.setItem('hardcall_room', roomId);
     sessionStorage.setItem('hardcall_key', password);
 
-    // CRONÔMETRO: Marca que eu entrei AGORA
     connectionTime = Date.now(); 
 
     document.getElementById('room-id-display').innerText = "Freq: " + roomId;
@@ -428,7 +418,7 @@ function enterRoom(roomId, password) {
     setupPresence(roomId);
     loadMessages(roomId);
     syncRoomSettings(roomId);
-    playSound('login'); // Som 2: Entrou na Sala (reusa o som de login)
+    playSound('login');
     
     window.visualViewport.addEventListener('resize', () => {
         const area = document.getElementById('messages-area');
@@ -436,7 +426,6 @@ function enterRoom(roomId, password) {
     });
 }
 
-// ... (Restante de sync, users, destroy mantido igual) ...
 window.addEventListener('pagehide', () => {
     if (currentRoom && userStatusRef) remove(userStatusRef);
 });
@@ -450,3 +439,144 @@ function leaveRoom() {
     checkAndDestroy(currentRoom);
     if (userStatusRef) remove(userStatusRef);
     currentRoom = null;
+    roomKey = null;
+    if(isGuest) {
+        signOut(auth);
+        location.reload();
+    } else {
+        showScreen('lobby');
+    }
+}
+
+function syncRoomSettings(roomId) {
+    const configRef = ref(db, 'rooms/' + roomId + '/config');
+    onValue(configRef, (snap) => {
+        const config = snap.val() || {};
+        const checkbox = document.getElementById('check-ephemeral-room');
+        checkbox.checked = config.isEphemeral === true;
+        if(!isGuest && config.ownerId === currentUser.uid) {
+            checkbox.disabled = false;
+            checkbox.onclick = () => { update(configRef, { isEphemeral: checkbox.checked }); };
+            document.getElementById('btn-nuke-room').style.display = 'block';
+        } else {
+            checkbox.disabled = true;
+            document.getElementById('btn-nuke-room').style.display = 'none';
+        }
+    });
+}
+
+document.getElementById('btn-room-users').addEventListener('click', () => {
+    document.getElementById('users-overlay').classList.toggle('hidden');
+    document.getElementById('room-settings-modal').classList.add('hidden');
+});
+document.getElementById('btn-room-settings').addEventListener('click', () => {
+    document.getElementById('room-settings-modal').classList.toggle('hidden');
+    document.getElementById('users-overlay').classList.add('hidden');
+});
+document.getElementById('btn-close-settings').addEventListener('click', () => {
+    document.getElementById('room-settings-modal').classList.add('hidden');
+});
+document.getElementById('btn-nuke-room').addEventListener('click', () => {
+    showCustomConfirm("ZONA DE PERIGO", "☢️ DESTRUIR SALA?", (confirmed) => {
+        if(confirmed) {
+            remove(ref(db, 'rooms/' + currentRoom));
+            leaveRoom();
+        }
+    });
+});
+
+function setupPresence(roomId) {
+    userStatusRef = ref(db, 'rooms/' + roomId + '/users/' + currentUser.uid);
+    onDisconnect(userStatusRef).remove();
+    set(userStatusRef, { nickname: currentUser.nickname, status: 'online', lastSeen: serverTimestamp() });
+    onValue(ref(db, 'rooms/' + roomId + '/users'), (snap) => {
+        document.getElementById('online-count').innerText = snap.size;
+        const list = document.getElementById('users-list');
+        list.innerHTML = '';
+        snap.forEach(c => {
+            const li = document.createElement('li');
+            li.innerText = c.val().nickname;
+            if(c.key === currentUser.uid) {
+                li.classList.add('me');
+                li.innerText += " (Você)";
+            }
+            list.appendChild(li);
+        });
+    });
+}
+
+async function checkAndDestroy(roomId) {
+    const roomRef = ref(db, 'rooms/' + roomId);
+    const roomSnap = await get(roomRef);
+    if (roomSnap.exists()) {
+        const data = roomSnap.val();
+        const users = data.users || {};
+        if (Object.keys(users).length <= 1 && data.config && data.config.isEphemeral) {
+            remove(roomRef);
+        }
+    }
+}
+
+document.getElementById('btn-send').addEventListener('click', sendMessage);
+document.getElementById('message-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+});
+
+function sendMessage() {
+    const input = document.getElementById('message-input');
+    const text = input.value;
+    if (!text.trim()) return;
+    const encryptedText = CryptoJS.AES.encrypt(text, roomKey).toString();
+    const msgData = { sender: currentUser.nickname, text: encryptedText, timestamp: serverTimestamp() };
+    if (replyingTo) {
+        msgData.replyTo = replyingTo.sender + ": " + replyingTo.text;
+        replyingTo = null;
+        document.getElementById('reply-preview').classList.add('hidden');
+    }
+    push(ref(db, 'rooms/' + currentRoom + '/messages'), msgData);
+    input.value = '';
+    playSound('click'); 
+}
+
+function loadMessages(roomId) {
+    const messagesRef = ref(db, 'rooms/' + roomId + '/messages');
+    onChildAdded(messagesRef, (snapshot) => {
+        const data = snapshot.val();
+        if(data) renderMessage(data);
+    });
+}
+
+function renderMessage(data) {
+    const area = document.getElementById('messages-area');
+    let decryptedText = "";
+    try {
+        decryptedText = CryptoJS.AES.decrypt(data.text, roomKey).toString(CryptoJS.enc.Utf8);
+    } catch (e) { decryptedText = "🔒 [Falha na Descriptografia]"; }
+    if (!decryptedText) return;
+    const div = document.createElement('div');
+    const isMe = data.sender === currentUser.nickname;
+    
+    if (!isMe && data.timestamp > connectionTime) {
+        playSound('message'); 
+    }
+
+    div.classList.add('msg', isMe ? 'sent' : 'received');
+    div.addEventListener('dblclick', () => startReply(data.sender, decryptedText));
+    const date = new Date(data.timestamp || Date.now());
+    const timeStr = date.getHours().toString().padStart(2,'0') + ':' + date.getMinutes().toString().padStart(2,'0');
+    let quoteHTML = data.replyTo ? `<span class="reply-quote">Resp: ${data.replyTo}</span>` : '';
+    div.innerHTML = `<span class="sender">${data.sender}</span>${quoteHTML}${decryptedText}<span class="time">${timeStr}</span>`;
+    area.appendChild(div);
+    area.scrollTop = area.scrollHeight;
+}
+
+function startReply(sender, text) {
+    replyingTo = { sender, text: text.substring(0, 30) + "..." };
+    document.getElementById('reply-preview').classList.remove('hidden');
+    document.getElementById('reply-text').innerText = `Respondendo a ${sender}: "${replyingTo.text}"`;
+    document.getElementById('message-input').focus();
+}
+document.getElementById('btn-cancel-reply').addEventListener('click', () => {
+    replyingTo = null;
+    document.getElementById('reply-preview').classList.add('hidden');
+});
