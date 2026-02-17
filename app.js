@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously, EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getDatabase, ref, set, push, onChildAdded, onDisconnect, serverTimestamp, remove, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously, EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getDatabase, ref, set, push, onChildAdded, onDisconnect, serverTimestamp, remove, get, onValue, update, off } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCUi-rXHv_Kxe4ePQmXfeVPN-P6RktV5Ok",
@@ -290,23 +290,18 @@ document.getElementById('btn-update-nick').addEventListener('click', () => {
     saveNickname(newNick, false);
 });
 
-document.getElementById('btn-link-password').addEventListener('click', () => {
+document.getElementById('btn-link-password').onclick = async () => {
     const newPass = document.getElementById('link-password-input').value;
-    if(newPass.length < 6) return showCustomAlert("Erro", "Senha deve ter 6+ dígitos.");
-    const credential = EmailAuthProvider.credential(currentUser.email, newPass);
-    linkWithCredential(currentUser, credential)
-        .then(() => {
-            showSuccessModal("Senha definida! Agora você pode logar com e-mail e senha.");
-            document.getElementById('link-password-input').value = '';
-        })
-        .catch((error) => {
-            if(error.code === 'auth/credential-already-exists') {
-                showCustomAlert("Erro", "Esta conta já possui senha definida.");
-            } else {
-                showCustomAlert("Erro", error.message);
-            }
-        });
-});
+    if (newPass.length < 6) return showCustomAlert("Erro", "Senha deve ter 6+ dígitos.");
+
+    try {
+        await updatePassword(auth.currentUser, newPass);
+        showSuccessModal("Senha atualizada com sucesso!");
+        document.getElementById('link-password-input').value = '';
+    } catch (error) {
+        showCustomAlert("Erro", "Falha ao definir: " + error.message);
+    }
+};
 
 async function loadMyRooms() {
     const list = document.getElementById('my-rooms-list');
@@ -513,11 +508,16 @@ function setupPresence(roomId) {
 async function checkAndDestroy(roomId) {
     const roomRef = ref(db, 'rooms/' + roomId);
     const roomSnap = await get(roomRef);
+    
     if (roomSnap.exists()) {
         const data = roomSnap.val();
         const users = data.users || {};
-        if (Object.keys(users).length <= 1 && data.config && data.config.isEphemeral) {
-            remove(roomRef);
+        const userCount = Object.keys(users).length;
+
+        // Se você for o ÚLTIMO na sala (contando com você ainda nela)
+        // e a sala for temporária, deleta tudo.
+        if (userCount <= 1 && data.config && data.config.isEphemeral) {
+            await remove(roomRef);
         }
     }
 }
@@ -545,6 +545,10 @@ function sendMessage() {
 
 function loadMessages(roomId) {
     const messagesRef = ref(db, 'rooms/' + roomId + '/messages');
+    
+    // Isso aqui limpa a memória do navegador para não duplicar
+    off(messagesRef); 
+    
     onChildAdded(messagesRef, (snapshot) => {
         const data = snapshot.val();
         if(data) renderMessage(data);
@@ -561,7 +565,7 @@ function renderMessage(data) {
     const div = document.createElement('div');
     const isMe = data.sender === currentUser.nickname;
 
-    if (!isMe && data.timestamp > connectionTime) {
+    if (!isMe && data.timestamp > (connectionTime + 5000)) {
         playSound('message'); 
     }
 
@@ -612,3 +616,7 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
