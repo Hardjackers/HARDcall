@@ -34,11 +34,6 @@ O **HARDcall** é uma plataforma de comunicação focada em privacidade e segura
 | ![Login](screenshots/login.png) | ![Chat](screenshots/chat.png) |
 
 
-⚙️ **Instalação e Uso**
-
-1. Clone o repo: `git clone https://github.com/Hardjackers/HARDcall.git`
-2. Configure seu `firebaseConfig` no arquivo `app.js`.
-3. Certifique-se de que a pasta `sound/` contenha os arquivos: `click.mp3`, `message.mp3`, `login.mp3` e `explosion.mp3`.
-
 👨‍💻 **Desenvolvedor**
 Desenvolvido por **Hardjackers**. Criando soluções digitais com segurança e estilo.
+
