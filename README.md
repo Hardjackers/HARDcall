@@ -1,6 +1,6 @@
 # HARDcall 🔒 🔊
 
-**Secure Communication Portal | v20.0 - The Sound Update**
+**Secure Communication Portal | v30.0 - The Sound Update**
 
 📡 **Sobre o Projeto**
 O **HARDcall** é uma plataforma de comunicação focada em privacidade e segurança. Desenvolvido para oferecer canais de bate-papo rápidos e seguros com estética Cyberpunk. Esta versão v20.0 introduz uma camada imersiva de áudio e correções críticas de usabilidade.
@@ -36,4 +36,5 @@ O **HARDcall** é uma plataforma de comunicação focada em privacidade e segura
 
 👨‍💻 **Desenvolvedor**
 Desenvolvido por **Hardjackers**. Criando soluções digitais com segurança e estilo.
+
 
