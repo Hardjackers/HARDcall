@@ -479,8 +479,13 @@ document.getElementById('btn-close-settings').addEventListener('click', () => {
 document.getElementById('btn-nuke-room').addEventListener('click', () => {
     showCustomConfirm("ZONA DE PERIGO", "☢️ DESTRUIR SALA?", (confirmed) => {
         if(confirmed) {
-            remove(ref(db, 'rooms/' + currentRoom));
-            leaveRoom();
+            playSound('explosion'); // <--- O som toca aqui!
+            
+            // Pequeno delay para o usuário ouvir o som antes da tela mudar
+            setTimeout(() => {
+                remove(ref(db, 'rooms/' + currentRoom));
+                leaveRoom();
+            }, 500); 
         }
     });
 });
@@ -580,3 +585,4 @@ document.getElementById('btn-cancel-reply').addEventListener('click', () => {
     replyingTo = null;
     document.getElementById('reply-preview').classList.add('hidden');
 });
+
