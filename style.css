@@ -1,248 +1,75 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously, EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getDatabase, ref, set, push, onChildAdded, onDisconnect, serverTimestamp, remove, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-
-const firebaseConfig = {
-    apiKey: "AIzaSyCUi-rXHv_Kxe4ePQmXfeVPN-P6RktV5Ok",
-    authDomain: "hardcall-501d4.firebaseapp.com",
-    projectId: "hardcall-501d4",
-    storageBucket: "hardcall-501d4.firebasestorage.app",
-    messagingSenderId: "511926914035",
-    appId: "1:511926914035:web:7c8540f3a5f95027006086"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getDatabase(app);
-const provider = new GoogleAuthProvider();
-
-
-let currentUser = null;
-let currentRoom = null;
-let roomKey = null;
-let userStatusRef = null;
-let replyingTo = null;
-let targetRoomForPass = null;
-let isGuest = false;
-let isMuted = localStorage.getItem('hardcall_mute') === 'true';
-let connectionTime = 0;
-
-
-const screens = {
-    login: document.getElementById('login-screen'),
-    setup: document.getElementById('setup-screen'),
-    lobby: document.getElementById('lobby-screen'),
-    chat: document.getElementById('chat-screen')
-};
-
-const muteCheckbox = document.getElementById('check-mute-sound');
-if (muteCheckbox) {
-    muteCheckbox.checked = isMuted;
-    muteCheckbox.addEventListener('change', () => {
-        isMuted = muteCheckbox.checked;
-        localStorage.setItem('hardcall_mute', isMuted);
-    });
+:root {
+    --bg-color: #0a0b10;
+    --surface-color: #161b22;
+    --primary-color: #00f3ff;
+    --secondary-color: #7d8590;
+    --danger-color: #ff3e3e;
+    --success-color: #00ff88;
+    --text-color: #e6edf3;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-ui: 'Roboto', sans-serif;
 }
 
-function playSound(type) {
-    if (isMuted) return;
-    const audio = document.getElementById('sfx-' + type);
-    if (audio) {
-        audio.currentTime = 0;
-        audio.play().catch(() => {});
-    }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-ui);
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
-document.querySelectorAll('button').forEach(btn => {
-    btn.addEventListener('click', () => playSound('click'));
-});
+#app-container { flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; }
 
-function showScreen(screenName) {
-    Object.values(screens).forEach(s => {
-        if (s) {
-            s.classList.remove('active', 'hidden');
-            s.classList.add('hidden');
-        }
-    });
-    if (screens[screenName]) {
-        screens[screenName].classList.remove('hidden');
-        screens[screenName].classList.add('active');
-    }
-    const footer = document.getElementById('main-footer');
-    if (footer) {
-        screenName === 'chat' ? footer.classList.add('hidden') : footer.classList.remove('hidden');
-    }
+.screen {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column; background-color: var(--bg-color);
+    transition: opacity 0.3s ease; z-index: 1;
+    align-items: center; justify-content: center;
 }
 
+.screen.hidden { opacity: 0; pointer-events: none; z-index: -1; }
+.screen.active { opacity: 1; pointer-events: auto; z-index: 10; }
 
-function showCustomAlert(title, msg) {
-    const modal = document.getElementById('custom-modal');
-    document.getElementById('modal-title').innerText = title;
-    document.getElementById('modal-msg').innerText = msg;
-    document.getElementById('modal-btn-cancel').classList.add('hidden');
-    modal.classList.remove('hidden');
-    document.getElementById('modal-btn-ok').onclick = () => modal.classList.add('hidden');
+@keyframes neon-pulse {
+    0% { box-shadow: 0 0 10px rgba(0, 243, 255, 0.1); border-color: #30363d; }
+    50% { box-shadow: 0 0 25px rgba(0, 243, 255, 0.5); border-color: var(--primary-color); }
+    100% { box-shadow: 0 0 10px rgba(0, 243, 255, 0.1); border-color: #30363d; }
 }
 
-function showCustomConfirm(title, msg, callback) {
-    const modal = document.getElementById('custom-modal');
-    document.getElementById('modal-title').innerText = title;
-    document.getElementById('modal-msg').innerText = msg;
-    document.getElementById('modal-btn-cancel').classList.remove('hidden');
-    modal.classList.remove('hidden');
-    document.getElementById('modal-btn-ok').onclick = () => { modal.classList.add('hidden'); callback(true); };
-    document.getElementById('modal-btn-cancel').onclick = () => { modal.classList.add('hidden'); callback(false); };
+.login-box, .setup-box {
+    width: 90%; max-width: 380px; padding: 2rem;
+    background: var(--surface-color); 
+    border: 1px solid #30363d; 
+    border-radius: 8px; text-align: center;
+    animation: neon-pulse 3s infinite ease-in-out;
 }
 
+h1 { font-family: var(--font-mono); color: var(--primary-color); margin-bottom: 1.5rem; }
 
-function closeGuestModal() {
-    document.getElementById('guest-nick-modal').classList.add('hidden');
-    signOut(auth);
-    isGuest = false;
+button { cursor: pointer; border: none; font-family: var(--font-mono); font-weight: bold; transition: all 0.2s; border-radius: 4px; }
+
+input {
+    width: 100%; padding: 10px; margin-bottom: 10px; background: #0d1117;
+    border: 1px solid #30363d; color: var(--text-color); font-family: var(--font-mono); border-radius: 4px;
 }
 
-const btnCloseGuest = document.getElementById('btn-close-guest-nick');
-if (btnCloseGuest) btnCloseGuest.addEventListener('click', closeGuestModal);
+.btn-primary { width: 100%; padding: 12px; background: var(--primary-color); color: #000; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.btn-secondary { width: 100%; padding: 10px; background: transparent; border: 1px solid var(--secondary-color); color: var(--secondary-color); margin-top: 10px; }
 
-const guestModalOverlay = document.getElementById('guest-nick-modal');
-if (guestModalOverlay) {
-    guestModalOverlay.addEventListener('click', (e) => {
-        if (e.target.id === 'guest-nick-modal') closeGuestModal();
-    });
-}
+#messages-area { flex: 1; width: 100%; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
 
+.msg { max-width: 80%; padding: 10px; border-radius: 8px; font-size: 0.9rem; }
+.msg.sent { align-self: flex-end; background: rgba(0, 243, 255, 0.1); border: 1px solid var(--primary-color); color: var(--primary-color); }
+.msg.received { align-self: flex-start; background: #21262d; border: 1px solid #30363d; }
 
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        const savedRoom = sessionStorage.getItem('hardcall_room');
-        const savedKey = sessionStorage.getItem('hardcall_key');
-        if (user.isAnonymous && !isGuest && !savedRoom) {
-            signOut(auth);
-            return;
-        }
-        currentUser = user;
-        if (savedRoom && savedKey) {
-            enterRoom(savedRoom, savedKey);
-        } else {
-            user.isAnonymous ? isGuest = true : checkFirstTimeSetup(user);
-        }
-    } else {
-        showScreen('login');
-    }
-});
+.chat-input-area { padding: 15px; background: var(--surface-color); border-top: 1px solid #30363d; display: flex; gap: 10px; }
 
-async function checkFirstTimeSetup(user) {
-    const snapshot = await get(ref(db, 'users/' + user.uid));
-    if (snapshot.exists()) {
-        const data = snapshot.val();
-        currentUser.nickname = data.nickname;
-        currentUser.lastNickChange = data.lastNickChange || 0;
-        startLobby();
-    } else {
-        showScreen('setup');
-        document.getElementById('setup-nickname').value = user.displayName ? user.displayName.split(' ')[0] : '';
-    }
-}
+/* Estilo para os Termos de Uso no Modal */
+.legal-text-content { text-align: left; line-height: 1.6; color: #e0e0e0; padding: 10px; }
+.legal-text-content h4 { color: var(--primary-color); margin-top: 15px; text-transform: uppercase; font-size: 0.9rem; }
 
-function startLobby() {
-    playSound('login');
-    document.getElementById('display-name').innerText = currentUser.nickname;
-    showScreen('lobby');
-}
-
-// --- 7. SALAS E COMUNICAÇÃO ---
-function enterRoom(roomId, password) {
-    currentRoom = roomId;
-    roomKey = password.trim() === "" ? "HARDCALL_PUBLIC" : password;
-    sessionStorage.setItem('hardcall_room', roomId);
-    sessionStorage.setItem('hardcall_key', password);
-    connectionTime = Date.now(); 
-
-    document.getElementById('room-id-display').innerText = "Freq: " + roomId;
-    document.getElementById('messages-area').innerHTML = '';
-    showScreen('chat');
-    setupPresence(roomId);
-    loadMessages(roomId);
-    playSound('login');
-}
-
-function sendMessage() {
-    const input = document.getElementById('message-input');
-    const text = input.value;
-    if (!text.trim()) return;
-    const encryptedText = CryptoJS.AES.encrypt(text, roomKey).toString();
-    const msgData = { sender: currentUser.nickname, text: encryptedText, timestamp: serverTimestamp() };
-    if (replyingTo) {
-        msgData.replyTo = replyingTo.sender + ": " + replyingTo.text;
-        replyingTo = null;
-        document.getElementById('reply-preview').classList.add('hidden');
-    }
-    push(ref(db, 'rooms/' + currentRoom + '/messages'), msgData);
-    input.value = '';
-    playSound('click'); 
-}
-
-function loadMessages(roomId) {
-    onChildAdded(ref(db, 'rooms/' + roomId + '/messages'), (snapshot) => {
-        const data = snapshot.val();
-        if(data) renderMessage(data);
-    });
-}
-
-function renderMessage(data) {
-    const area = document.getElementById('messages-area');
-    let decryptedText = "";
-    try {
-        decryptedText = CryptoJS.AES.decrypt(data.text, roomKey).toString(CryptoJS.enc.Utf8);
-    } catch (e) { decryptedText = "🔒 [Erro]"; }
-    if (!decryptedText) return;
-
-    const isMe = data.sender === currentUser.nickname;
-    if (!isMe && data.timestamp > connectionTime) playSound('message');
-
-    const div = document.createElement('div');
-    div.classList.add('msg', isMe ? 'sent' : 'received');
-    const timeStr = new Date(data.timestamp || Date.now()).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    let quoteHTML = data.replyTo ? `<span class="reply-quote">Resp: ${data.replyTo}</span>` : '';
-    div.innerHTML = `<span class="sender">${data.sender}</span>${quoteHTML}${decryptedText}<span class="time">${timeStr}</span>`;
-    area.appendChild(div);
-    area.scrollTop = area.scrollHeight;
-}
-
-function leaveRoom() {
-    if (!currentRoom) return;
-    sessionStorage.removeItem('hardcall_room');
-    sessionStorage.removeItem('hardcall_key');
-    if (userStatusRef) remove(userStatusRef);
-    currentRoom = null;
-    isGuest ? location.reload() : showScreen('lobby');
-}
-
-function setupPresence(roomId) {
-    userStatusRef = ref(db, 'rooms/' + roomId + '/users/' + currentUser.uid);
-    onDisconnect(userStatusRef).remove();
-    set(userStatusRef, { nickname: currentUser.nickname, status: 'online', lastSeen: serverTimestamp() });
-}
-
-// --- 8. LISTENERS DE EVENTO ---
-document.getElementById('btn-send').onclick = sendMessage;
-document.getElementById('message-input').onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
-document.getElementById('btn-leave-room').onclick = leaveRoom;
-document.getElementById('btn-logout').onclick = () => { if (currentRoom) leaveRoom(); signOut(auth); };
-
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        const guestModal = document.getElementById('guest-nick-modal');
-        if (guestModal && !guestModal.classList.contains('hidden')) {
-            closeGuestModal();
-        } else if (currentRoom) {
-            leaveRoom();
-        }
-    }
-});
-
-document.getElementById('btn-google-login').onclick = () => signInWithPopup(auth, provider);
-
-// Finalização do arquivo garantida
-console.log("HARDcall Core System Online.");
+.hidden { display: none !important; }
