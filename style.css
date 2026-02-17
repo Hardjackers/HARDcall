@@ -24,7 +24,6 @@ body.no-select { user-select: none; -webkit-user-select: none; }
 .screen.active { opacity: 1; pointer-events: auto; z-index: 10; }
 #chat-screen { justify-content: flex-start; align-items: stretch; }
 
-/* --- ANIMAÇÃO DE PULSO NEON (NOVO) --- */
 @keyframes neon-pulse {
     0% {
         box-shadow: 0 0 10px rgba(0, 243, 255, 0.1);
@@ -40,7 +39,6 @@ body.no-select { user-select: none; -webkit-user-select: none; }
     }
 }
 
-/* LOGIN & SETUP (Com a animação aplicada) */
 .login-box, .setup-box {
     width: 90%; max-width: 380px; padding: 2rem;
     background: var(--surface-color); 
@@ -49,7 +47,7 @@ body.no-select { user-select: none; -webkit-user-select: none; }
     box-shadow: 0 4px 20px rgba(0, 243, 255, 0.1);
     max-height: 90vh; overflow-y: auto;
     
-    /* A Mágica acontece aqui: */
+
     animation: neon-pulse 3s infinite ease-in-out;
 }
 
@@ -120,7 +118,6 @@ input:focus { outline: none; border-color: var(--primary-color); }
 #message-input { margin-bottom: 0; flex: 1; }
 #btn-send { padding: 0 20px; background: var(--primary-color); color: #000; border-radius: 4px; }
 
-/* MODALS */
 .screen-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; }
 .custom-modal-box { background: var(--surface-color); border: 1px solid var(--primary-color); padding: 25px; border-radius: 8px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 0 30px rgba(0, 243, 255, 0.2); position: relative; }
 .wide-box { max-width: 500px; }
@@ -151,7 +148,7 @@ input:focus { outline: none; border-color: var(--primary-color); }
 .btn-mini { padding: 4px 8px; font-size: 0.7rem; background: transparent; border: 1px solid var(--secondary-color); color: var(--secondary-color); border-radius: 3px; }
 .btn-mini:hover { border-color: var(--primary-color); color: var(--primary-color); }
 
-/* FOOTER & LEGAL */
+
 #main-footer { padding: 25px 20px; text-align: center; background: var(--bg-color); border-top: 1px solid #1a1a1d; font-size: 0.8rem; color: var(--secondary-color); margin-top: auto; width: 100%; }
 .footer-content { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .btn-creator { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; background: #0d1117; border: 1px solid #30363d; border-radius: 20px; color: var(--text-color); text-decoration: none; font-family: var(--font-mono); transition: all 0.3s ease; }
@@ -175,3 +172,4 @@ input:focus { outline: none; border-color: var(--primary-color); }
     .panel { padding: 15px; }
     .msg { font-size: 0.85rem; }
 }
+
