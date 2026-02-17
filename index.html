@@ -185,13 +185,14 @@
     </div>
 
     <div id="guest-nick-modal" class="screen-overlay hidden">
-        <div class="custom-modal-box">
-            <h3>NICKNAME TEMPORÁRIO</h3>
-            <p>Crie um nome para acessar:</p>
-            <input type="text" id="guest-nickname-input" placeholder="Ex: Visitante01" maxlength="15">
-            <button id="btn-confirm-guest-nick" class="btn-primary">Continuar</button>
-        </div>
+    <div class="custom-modal-box">
+        <button id="btn-close-guest-nick" class="close-x-btn">✖</button>
+        <h3>NICKNAME TEMPORÁRIO</h3>
+        <p>Crie um nome para acessar:</p>
+        <input type="text" id="guest-nickname-input" placeholder="Ex: Visitante01" maxlength="15">
+        <button id="btn-confirm-guest-nick" class="btn-primary">Continuar</button>
     </div>
+</div>
 
     <div id="temp-warning-modal" class="screen-overlay hidden">
         <div class="custom-modal-box warning-box">
@@ -272,6 +273,7 @@
     <script type="module" src="app.js"></script>
 </body>
 </html>
+
 
 
 
