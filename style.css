@@ -158,7 +158,36 @@ input:focus { outline: none; border-color: var(--primary-color); }
 .btn-legal:hover { color: var(--primary-color); }
 
 .legal-box { text-align: left; max-height: 80vh; display: flex; flex-direction: column; }
-.legal-text-content { overflow-y: auto; max-height: 60vh; padding-right: 10px; margin-top: 10px; font-size: 0.85rem; line-height: 1.5; color: #ccc; }
+.legal-text-content {
+    text-align: left;
+    line-height: 1.6;
+    font-family: 'Roboto', sans-serif;
+    color: #e0e0e0;
+}
+
+.legal-text-content h4 {
+    color: #00f3ff; /* Cor Neon do seu projeto */
+    margin-top: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+}
+
+.legal-text-content ul {
+    padding-left: 20px;
+    margin-bottom: 15px;
+}
+
+.legal-text-content li {
+    margin-bottom: 10px;
+}
+
+.footer-legal {
+    margin-top: 30px;
+    font-size: 0.8rem;
+    opacity: 0.7;
+    text-align: center;
+}
+
 .legal-text-content p { margin-bottom: 12px; }
 .close-x-btn { position: absolute; top: 10px; right: 10px; background: transparent; border: none; color: var(--danger-color); font-size: 1.5rem; font-weight: bold; cursor: pointer; }
 .close-x-btn:hover { transform: scale(1.1); }
@@ -172,4 +201,5 @@ input:focus { outline: none; border-color: var(--primary-color); }
     .panel { padding: 15px; }
     .msg { font-size: 0.85rem; }
 }
+
 
