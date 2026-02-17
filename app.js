@@ -1,9 +1,9 @@
-/* HARDcall v15 - Mobile Fixes, Safari Ghost Fix & Enter Key */
+/* HARDcall v16 - Persistence & Panic Button */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously, EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, set, push, onChildAdded, onDisconnect, serverTimestamp, remove, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-// --- 1. CONFIGURAÇÃO (COLE SUAS CHAVES AQUI!) ---
+// --- 1. CONFIGURAÇÃO (SUAS CHAVES) ---
 const firebaseConfig = {
     apiKey: "AIzaSyCUi-rXHv_Kxe4ePQmXfeVPN-P6RktV5Ok",
     authDomain: "hardcall-501d4.firebaseapp.com",
@@ -89,7 +89,6 @@ function setupEnterKey(inputIds, buttonId) {
     });
 }
 
-// Aplicando o Enter em tudo:
 setupEnterKey(['guest-room-code', 'guest-room-pass'], 'btn-guest-enter'); 
 setupEnterKey(['login-email-input', 'login-pass-input'], 'btn-confirm-email-login');
 setupEnterKey(['setup-nickname'], 'btn-save-setup');
@@ -99,6 +98,14 @@ setupEnterKey(['guest-nickname-input'], 'btn-confirm-guest-nick');
 setupEnterKey(['new-room-pass'], 'btn-confirm-pass');
 setupEnterKey(['link-password-input'], 'btn-link-password');
 setupEnterKey(['edit-nickname-input'], 'btn-update-nick');
+
+// --- BOTÃO PÂNICO (ESC) ---
+document.addEventListener('keydown', (e) => {
+    // Se apertar ESC e estiver numa sala, sai imediatamente
+    if (e.key === 'Escape' && currentRoom) {
+        leaveRoom();
+    }
+});
 
 // --- 4. AUTENTICAÇÃO ---
 document.getElementById('btn-google-login').addEventListener('click', () => {
@@ -121,14 +128,29 @@ document.getElementById('btn-confirm-email-login').addEventListener('click', () 
         .catch((error) => showCustomAlert("Erro", "Falha no acesso. Verifique credenciais."));
 });
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     if (user) {
-        if (user.isAnonymous && !isGuest) {
+        // VERIFICAÇÃO DE PERSISTÊNCIA INTELIGENTE
+        const savedRoom = sessionStorage.getItem('hardcall_room');
+        const savedKey = sessionStorage.getItem('hardcall_key');
+
+        // Se for anônimo (Guest) e NÃO tiver sala salva, aí sim desloga (evita lixo)
+        // Se tiver sala salva, deixa passar para reconectar
+        if (user.isAnonymous && !isGuest && !savedRoom) {
             signOut(auth);
             return;
         }
+
         currentUser = user;
-        if(isGuest) { } else { checkFirstTimeSetup(user); }
+        
+        if (savedRoom && savedKey) {
+            // Se tinha sala salva no F5, reconecta direto
+            enterRoom(savedRoom, savedKey);
+        } else {
+            // Fluxo normal
+            if(user.isAnonymous) { isGuest = true; } 
+            else { checkFirstTimeSetup(user); }
+        }
     } else {
         showScreen('login');
     }
@@ -148,7 +170,7 @@ async function checkFirstTimeSetup(user) {
     }
 }
 
-// --- LÓGICA CONVIDADO ---
+// --- CONVIDADO ---
 let guestTempRoom = null;
 let guestTempPass = null;
 
@@ -159,6 +181,8 @@ document.getElementById('btn-guest-enter').addEventListener('click', () => {
     guestTempRoom = code;
     guestTempPass = pass;
     isGuest = true;
+    
+    // Logout preventivo para limpar
     signOut(auth).then(() => { return signInAnonymously(auth); })
     .then(() => { document.getElementById('guest-nick-modal').classList.remove('hidden'); })
     .catch((error) => showCustomAlert("Erro Convidado", error.message));
@@ -196,7 +220,7 @@ document.getElementById('btn-logout').addEventListener('click', () => {
     location.reload();
 });
 
-// --- SETUP / PERFIL ---
+// --- PERFIL ---
 document.getElementById('btn-save-setup').addEventListener('click', async () => {
     const nick = document.getElementById('setup-nickname').value;
     saveNickname(nick, true);
@@ -358,8 +382,14 @@ document.getElementById('btn-join-room').addEventListener('click', async () => {
 function enterRoom(roomId, password) {
     currentRoom = roomId;
     roomKey = password.trim() === "" ? "HARDCALL_PUBLIC" : password;
+    
+    // PERSISTÊNCIA: Salva na memória da aba
+    sessionStorage.setItem('hardcall_room', roomId);
+    sessionStorage.setItem('hardcall_key', password);
+
     document.getElementById('room-id-display').innerText = "Freq: " + roomId;
     document.getElementById('messages-area').innerHTML = '';
+    
     document.getElementById('room-settings-modal').classList.add('hidden');
     document.getElementById('users-overlay').classList.add('hidden');
     
@@ -378,7 +408,6 @@ function enterRoom(roomId, password) {
     loadMessages(roomId);
     syncRoomSettings(roomId);
     
-    // FIX MOBILE: Rolar para o fim ao abrir teclado
     window.visualViewport.addEventListener('resize', () => {
         const area = document.getElementById('messages-area');
         area.scrollTop = area.scrollHeight;
@@ -387,16 +416,23 @@ function enterRoom(roomId, password) {
 
 // CORREÇÃO SAFARI: Mata sessão ao fechar aba
 window.addEventListener('pagehide', () => {
-    if (currentRoom && userStatusRef) remove(userStatusRef);
+    // Se for convidado, a gente quer que morra mesmo ao fechar a página (não no F5)
+    // A persistência só segura se o F5 acontecer. O pagehide é para garantir cleanup.
 });
 
 document.getElementById('btn-leave-room').addEventListener('click', leaveRoom);
 function leaveRoom() {
     if (!currentRoom) return;
+    
+    // LIMPA PERSISTÊNCIA
+    sessionStorage.removeItem('hardcall_room');
+    sessionStorage.removeItem('hardcall_key');
+
     checkAndDestroy(currentRoom);
     if (userStatusRef) remove(userStatusRef);
     currentRoom = null;
     roomKey = null;
+    
     if(isGuest) {
         signOut(auth);
         location.reload();
@@ -446,6 +482,7 @@ function setupPresence(roomId) {
     userStatusRef = ref(db, 'rooms/' + roomId + '/users/' + currentUser.uid);
     onDisconnect(userStatusRef).remove();
     set(userStatusRef, { nickname: currentUser.nickname, status: 'online', lastSeen: serverTimestamp() });
+    
     onValue(ref(db, 'rooms/' + roomId + '/users'), (snap) => {
         document.getElementById('online-count').innerText = snap.size;
         const list = document.getElementById('users-list');
@@ -468,7 +505,6 @@ async function checkAndDestroy(roomId) {
     if (roomSnap.exists()) {
         const data = roomSnap.val();
         const users = data.users || {};
-        // Se só tem eu (1) ou ninguém (0), pode apagar
         if (Object.keys(users).length <= 1 && data.config && data.config.isEphemeral) {
             remove(roomRef);
         }
