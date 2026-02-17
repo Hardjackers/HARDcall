@@ -1,230 +1,3 @@
-/*
- * HARDcall - Secure Communication Portal
- * Copyright (c) 2026 Hardjackers
- * Desenvolvido por: Hardjackers
- * GitHub: https://github.com/Hardjackers
- *
- * Todos os direitos reservados. É proibida a cópia ou redistribuição
- * não autorizada deste código.
- */
-
-/* HARDcall v12 - Online Users Dropdown */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously, EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { getDatabase, ref, set, push, onChildAdded, onDisconnect, serverTimestamp, remove, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-// --- 1. CONFIGURAÇÃO (COLE SUAS CHAVES AQUI!) ---
-const firebaseConfig = {
-    apiKey: "AIzaSyCUi-rXHv_Kxe4ePQmXfeVPN-P6RktV5Ok",
-    authDomain: "hardcall-501d4.firebaseapp.com",
-    projectId: "hardcall-501d4",
-    storageBucket: "hardcall-501d4.firebasestorage.app",
-    messagingSenderId: "511926914035",
-    appId: "1:511926914035:web:7c8540f3a5f95027006086"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getDatabase(app);
-const provider = new GoogleAuthProvider();
-
-// --- 2. ESTADO GLOBAL ---
-let currentUser = null;
-let currentRoom = null;
-let roomKey = null;
-let userStatusRef = null;
-let replyingTo = null;
-let targetRoomForPass = null;
-let isGuest = false;
-
-// --- 3. UI HELPER FUNCTIONS ---
-const screens = {
-    login: document.getElementById('login-screen'),
-    setup: document.getElementById('setup-screen'),
-    lobby: document.getElementById('lobby-screen'),
-    chat: document.getElementById('chat-screen')
-};
-
-function showScreen(screenName) {
-    Object.values(screens).forEach(s => s.classList.remove('active', 'hidden'));
-    Object.values(screens).forEach(s => s.classList.add('hidden'));
-    screens[screenName].classList.remove('hidden');
-    screens[screenName].classList.add('active');
-
-    const footer = document.getElementById('main-footer');
-    if (screenName === 'chat') {
-        footer.classList.add('hidden');
-    } else {
-        footer.classList.remove('hidden');
-    }
-}
-
-function showCustomAlert(title, msg) {
-    const modal = document.getElementById('custom-modal');
-    document.getElementById('modal-title').innerText = title;
-    document.getElementById('modal-msg').innerText = msg;
-    document.getElementById('modal-btn-cancel').classList.add('hidden');
-    modal.classList.remove('hidden');
-    document.getElementById('modal-btn-ok').onclick = () => { modal.classList.add('hidden'); };
-}
-
-function showCustomConfirm(title, msg, callback) {
-    const modal = document.getElementById('custom-modal');
-    document.getElementById('modal-title').innerText = title;
-    document.getElementById('modal-msg').innerText = msg;
-    document.getElementById('modal-btn-cancel').classList.remove('hidden');
-    modal.classList.remove('hidden');
-    document.getElementById('modal-btn-ok').onclick = () => { modal.classList.add('hidden'); callback(true); };
-    document.getElementById('modal-btn-cancel').onclick = () => { modal.classList.add('hidden'); callback(false); };
-}
-
-function showSuccessModal(msg) {
-    const modal = document.getElementById('success-modal');
-    document.getElementById('success-msg').innerText = msg;
-    modal.classList.remove('hidden');
-    document.getElementById('btn-success-ok').onclick = () => { modal.classList.add('hidden'); };
-}
-
-// --- 4. AUTENTICAÇÃO ---
-document.getElementById('btn-google-login').addEventListener('click', () => {
-    isGuest = false;
-    signInWithPopup(auth, provider).catch((error) => showCustomAlert("Erro Login", error.message));
-});
-
-document.getElementById('btn-email-login-open').addEventListener('click', () => {
-    document.getElementById('email-login-modal').classList.remove('hidden');
-});
-document.getElementById('btn-cancel-email-login').addEventListener('click', () => {
-    document.getElementById('email-login-modal').classList.add('hidden');
-});
-document.getElementById('btn-confirm-email-login').addEventListener('click', () => {
-    const email = document.getElementById('login-email-input').value;
-    const pass = document.getElementById('login-pass-input').value;
-    isGuest = false;
-    signInWithEmailAndPassword(auth, email, pass)
-        .then(() => { document.getElementById('email-login-modal').classList.add('hidden'); })
-        .catch((error) => showCustomAlert("Erro", "Falha no acesso. Verifique credenciais."));
-});
-
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        if (user.isAnonymous && !isGuest) {
-            signOut(auth);
-            return;
-        }
-        currentUser = user;
-        if(isGuest) { } else { checkFirstTimeSetup(user); }
-    } else {
-        showScreen('login');
-    }
-});
-
-async function checkFirstTimeSetup(user) {
-    const userRef = ref(db, 'users/' + user.uid);
-    const snapshot = await get(userRef);
-    if (snapshot.exists()) {
-        const data = snapshot.val();
-        currentUser.nickname = data.nickname;
-        currentUser.lastNickChange = data.lastNickChange || 0;
-        startLobby();
-    } else {
-        showScreen('setup');
-        document.getElementById('setup-nickname').value = user.displayName ? user.displayName.split(' ')[0] : '';
-    }
-}
-
-let guestTempRoom = null;
-let guestTempPass = null;
-
-document.getElementById('btn-guest-enter').addEventListener('click', () => {
-    const code = document.getElementById('guest-room-code').value.toUpperCase();
-    const pass = document.getElementById('guest-room-pass').value;
-    if(!code) return showCustomAlert("Erro", "Digite o nome da sala temporária.");
-    guestTempRoom = code;
-    guestTempPass = pass;
-    isGuest = true;
-    signOut(auth).then(() => { return signInAnonymously(auth); })
-    .then(() => { document.getElementById('guest-nick-modal').classList.remove('hidden'); })
-    .catch((error) => showCustomAlert("Erro Convidado", error.message));
-});
-
-document.getElementById('btn-confirm-guest-nick').addEventListener('click', () => {
-    const nick = document.getElementById('guest-nickname-input').value;
-    if(nick.length < 3) return showCustomAlert("Erro", "Nick muito curto.");
-    currentUser.nickname = nick;
-    document.getElementById('guest-nick-modal').classList.add('hidden');
-    document.getElementById('temp-warning-modal').classList.remove('hidden');
-});
-
-document.getElementById('btn-temp-ok').addEventListener('click', () => {
-    document.getElementById('temp-warning-modal').classList.add('hidden');
-    checkAndEnterGuestRoom();
-});
-
-async function checkAndEnterGuestRoom() {
-    const roomRef = ref(db, 'rooms/' + guestTempRoom);
-    const roomSnap = await get(roomRef);
-    if (!roomSnap.exists()) {
-        const passHash = CryptoJS.SHA256(guestTempPass).toString();
-        await set(roomRef, {
-            createdAt: serverTimestamp(),
-            config: { isEphemeral: true, passHash: passHash, ownerId: 'GUEST' }
-        });
-    }
-    enterRoom(guestTempRoom, guestTempPass);
-}
-
-document.getElementById('btn-logout').addEventListener('click', () => {
-    if (currentRoom) leaveRoom();
-    signOut(auth);
-    location.reload();
-});
-
-// --- 5. SETUP E PERFIL ---
-document.getElementById('btn-save-setup').addEventListener('click', async () => {
-    const nick = document.getElementById('setup-nickname').value;
-    saveNickname(nick, true);
-});
-
-async function saveNickname(nick, isSetup) {
-    if (nick.length < 3) return showCustomAlert("Erro", "Nick curto.");
-    if (!isSetup && !isGuest) {
-        const now = Date.now();
-        const lastChange = currentUser.lastNickChange || 0;
-        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-        if (now - lastChange < sevenDaysMs) {
-            const daysLeft = Math.ceil((sevenDaysMs - (now - lastChange)) / (1000 * 60 * 60 * 24));
-            const errorMsg = document.getElementById('nick-error-msg');
-            errorMsg.innerText = `Aguarde ${daysLeft} dias.`;
-            errorMsg.classList.remove('hidden');
-            return;
-        }
-    }
-    const usersSnap = await get(ref(db, 'users'));
-    let exists = false;
-    usersSnap.forEach(child => { if(child.val().nickname === nick && child.key !== currentUser.uid) exists = true; });
-    if(exists) return showCustomAlert("Erro", "Codinome em uso.");
-    if(!isGuest) {
-        await update(ref(db, 'users/' + currentUser.uid), { nickname: nick, lastNickChange: serverTimestamp() });
-        currentUser.lastNickChange = Date.now();
-    }
-    currentUser.nickname = nick;
-    if(isSetup) {
-        startLobby();
-    } else {
-        showSuccessModal("Codinome atualizado!");
-        document.getElementById('display-name').innerText = nick;
-        document.getElementById('nick-error-msg').classList.add('hidden');
-    }
-}
-
-function startLobby() {
-    document.getElementById('display-name').innerText = currentUser.nickname;
-    showScreen('lobby');
-}
-
-document.getElementById('btn-my-profile').addEventListener('click', () => {
-    if(isGuest) return showCustomAlert("Restrito", "Acesso temporário não possui perfil.");
     document.getElementById('profile-modal').classList.remove('hidden');
     document.getElementById('edit-nickname-input').value = currentUser.nickname;
     loadMyRooms();
@@ -288,7 +61,7 @@ async function loadMyRooms() {
     });
 }
 
-// --- 6. SALAS, CHAT E MENSAGENS ---
+// --- SALAS E CHAT ---
 document.getElementById('btn-cancel-pass').addEventListener('click', () => {
     document.getElementById('change-pass-modal').classList.add('hidden');
 });
@@ -344,8 +117,6 @@ function enterRoom(roomId, password) {
     roomKey = password.trim() === "" ? "HARDCALL_PUBLIC" : password;
     document.getElementById('room-id-display').innerText = "Freq: " + roomId;
     document.getElementById('messages-area').innerHTML = '';
-    
-    // Esconde modais ao entrar
     document.getElementById('room-settings-modal').classList.add('hidden');
     document.getElementById('users-overlay').classList.add('hidden');
     
@@ -363,7 +134,18 @@ function enterRoom(roomId, password) {
     setupPresence(roomId);
     loadMessages(roomId);
     syncRoomSettings(roomId);
+    
+    // FIX MOBILE: Rolar para o fim ao abrir teclado
+    window.visualViewport.addEventListener('resize', () => {
+        const area = document.getElementById('messages-area');
+        area.scrollTop = area.scrollHeight;
+    });
 }
+
+// CORREÇÃO SAFARI: Mata sessão ao fechar aba
+window.addEventListener('pagehide', () => {
+    if (currentRoom && userStatusRef) remove(userStatusRef);
+});
 
 document.getElementById('btn-leave-room').addEventListener('click', leaveRoom);
 function leaveRoom() {
@@ -397,17 +179,14 @@ function syncRoomSettings(roomId) {
     });
 }
 
-// --- CLIQUE PARA VER USUÁRIOS ---
 document.getElementById('btn-room-users').addEventListener('click', () => {
     document.getElementById('users-overlay').classList.toggle('hidden');
-    document.getElementById('room-settings-modal').classList.add('hidden'); // Fecha settings se tiver aberto
+    document.getElementById('room-settings-modal').classList.add('hidden');
 });
-
 document.getElementById('btn-room-settings').addEventListener('click', () => {
     document.getElementById('room-settings-modal').classList.toggle('hidden');
-    document.getElementById('users-overlay').classList.add('hidden'); // Fecha users se tiver aberto
+    document.getElementById('users-overlay').classList.add('hidden');
 });
-
 document.getElementById('btn-close-settings').addEventListener('click', () => {
     document.getElementById('room-settings-modal').classList.add('hidden');
 });
@@ -424,8 +203,6 @@ function setupPresence(roomId) {
     userStatusRef = ref(db, 'rooms/' + roomId + '/users/' + currentUser.uid);
     onDisconnect(userStatusRef).remove();
     set(userStatusRef, { nickname: currentUser.nickname, status: 'online', lastSeen: serverTimestamp() });
-    
-    // Atualiza a lista oculta e o contador
     onValue(ref(db, 'rooms/' + roomId + '/users'), (snap) => {
         document.getElementById('online-count').innerText = snap.size;
         const list = document.getElementById('users-list');
@@ -448,9 +225,8 @@ async function checkAndDestroy(roomId) {
     if (roomSnap.exists()) {
         const data = roomSnap.val();
         const users = data.users || {};
-        const userCount = Object.keys(users).length;
-        const isEphemeral = data.config && data.config.isEphemeral;
-        if (userCount <= 1 && isEphemeral) {
+        // Se só tem eu (1) ou ninguém (0), pode apagar
+        if (Object.keys(users).length <= 1 && data.config && data.config.isEphemeral) {
             remove(roomRef);
         }
     }
