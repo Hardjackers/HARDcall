@@ -1,7 +1,7 @@
 # HARDcall 🔒
 > **Secure Communication Portal**
 
-![Version](https://img.shields.io/badge/version-1.0-cyan?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-16.0-cyan?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-stable-success?style=for-the-badge)
 ![License](https://img.shields.io/badge/license-Hardjackers-red?style=for-the-badge)
 
@@ -20,6 +20,16 @@ Diferente de apps convencionais, o HARDcall permite a criação de **Salas Tempo
     * **Modo Fantasma (Guest):** Acesso totalmente anônimo para chats rápidos sem deixar rastros.
 * **🛡️ Gestão de Identidade:** Sistema de proteção de nickname (troca permitida apenas a cada 7 dias para usuários registrados).
 * **🎨 UI Cyberpunk:** Interface imersiva, responsiva e focada em usabilidade com tema Dark/Neon.
+
+## 🔄 Histórico de Atualizações (v16.0)
+
+Esta versão traz melhorias críticas de estabilidade e usabilidade baseadas em testes reais:
+
+* **📱 Correção Mobile:** Implementação de `100dvh` e `interactive-widget` para corrigir bugs visuais com teclado virtual em Android/iOS.
+* **🔄 Persistência de Sessão:** Suporte a `sessionStorage` para evitar desconexões acidentais ao atualizar a página (F5).
+* **⌨️ Navegação Otimizada:** Suporte global à tecla **ENTER** e novo **"Botão Pânico"** (pressione `ESC` para sair imediatamente da sala).
+* **🍏 Correção Safari:** Otimização para evitar usuários "fantasmas" ao minimizar o navegador em dispositivos Apple.
+* **🎨 UI/UX:** Centralização responsiva e proteção básica contra cópia de texto na interface.
 
 ## 🛠️ Tecnologias Utilizadas
 
