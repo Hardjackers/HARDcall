@@ -165,11 +165,15 @@ onAuthStateChanged(auth, async (user) => {
         if (savedRoom && savedKey) {
             enterRoom(savedRoom, savedKey);
         } else {
-            if(user.isAnonymous) { isGuest = true; } 
-            else { checkFirstTimeSetup(user); }
+            if(user.isAnonymous) { 
+                isGuest = true; 
+                showScreen('lobby');
+            } else { 
+                checkFirstTimeSetup(user); 
+            }
         }
     } else {
-        showScreen('login');
+        showScreen('login'); // Corrigido para 'login'
     }
 });
 
@@ -613,3 +617,4 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
