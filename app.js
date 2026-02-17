@@ -1,9 +1,9 @@
-/* HARDcall v16 - Persistence & Panic Button */
+/* HARDcall v17 - Legal Info Modal */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously, EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { getDatabase, ref, set, push, onChildAdded, onDisconnect, serverTimestamp, remove, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-// --- 1. CONFIGURAÇÃO (SUAS CHAVES) ---
+// --- 1. CONFIGURAÇÃO (COLE SUAS CHAVES AQUI!) ---
 const firebaseConfig = {
     apiKey: "AIzaSyCUi-rXHv_Kxe4ePQmXfeVPN-P6RktV5Ok",
     authDomain: "hardcall-501d4.firebaseapp.com",
@@ -75,6 +75,14 @@ function showSuccessModal(msg) {
     document.getElementById('btn-success-ok').onclick = () => { modal.classList.add('hidden'); };
 }
 
+// --- NOVO: LÓGICA DO MODAL LEGAL ---
+document.getElementById('btn-open-legal').addEventListener('click', () => {
+    document.getElementById('legal-modal').classList.remove('hidden');
+});
+document.getElementById('btn-close-legal').addEventListener('click', () => {
+    document.getElementById('legal-modal').classList.add('hidden');
+});
+
 // --- FUNÇÃO MÁGICA DO ENTER ---
 function setupEnterKey(inputIds, buttonId) {
     inputIds.forEach(id => {
@@ -89,6 +97,7 @@ function setupEnterKey(inputIds, buttonId) {
     });
 }
 
+// Aplicando o Enter em tudo:
 setupEnterKey(['guest-room-code', 'guest-room-pass'], 'btn-guest-enter'); 
 setupEnterKey(['login-email-input', 'login-pass-input'], 'btn-confirm-email-login');
 setupEnterKey(['setup-nickname'], 'btn-save-setup');
@@ -101,7 +110,6 @@ setupEnterKey(['edit-nickname-input'], 'btn-update-nick');
 
 // --- BOTÃO PÂNICO (ESC) ---
 document.addEventListener('keydown', (e) => {
-    // Se apertar ESC e estiver numa sala, sai imediatamente
     if (e.key === 'Escape' && currentRoom) {
         leaveRoom();
     }
@@ -130,12 +138,9 @@ document.getElementById('btn-confirm-email-login').addEventListener('click', () 
 
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        // VERIFICAÇÃO DE PERSISTÊNCIA INTELIGENTE
         const savedRoom = sessionStorage.getItem('hardcall_room');
         const savedKey = sessionStorage.getItem('hardcall_key');
 
-        // Se for anônimo (Guest) e NÃO tiver sala salva, aí sim desloga (evita lixo)
-        // Se tiver sala salva, deixa passar para reconectar
         if (user.isAnonymous && !isGuest && !savedRoom) {
             signOut(auth);
             return;
@@ -144,10 +149,8 @@ onAuthStateChanged(auth, async (user) => {
         currentUser = user;
         
         if (savedRoom && savedKey) {
-            // Se tinha sala salva no F5, reconecta direto
             enterRoom(savedRoom, savedKey);
         } else {
-            // Fluxo normal
             if(user.isAnonymous) { isGuest = true; } 
             else { checkFirstTimeSetup(user); }
         }
@@ -181,8 +184,6 @@ document.getElementById('btn-guest-enter').addEventListener('click', () => {
     guestTempRoom = code;
     guestTempPass = pass;
     isGuest = true;
-    
-    // Logout preventivo para limpar
     signOut(auth).then(() => { return signInAnonymously(auth); })
     .then(() => { document.getElementById('guest-nick-modal').classList.remove('hidden'); })
     .catch((error) => showCustomAlert("Erro Convidado", error.message));
@@ -383,13 +384,11 @@ function enterRoom(roomId, password) {
     currentRoom = roomId;
     roomKey = password.trim() === "" ? "HARDCALL_PUBLIC" : password;
     
-    // PERSISTÊNCIA: Salva na memória da aba
     sessionStorage.setItem('hardcall_room', roomId);
     sessionStorage.setItem('hardcall_key', password);
 
     document.getElementById('room-id-display').innerText = "Freq: " + roomId;
     document.getElementById('messages-area').innerHTML = '';
-    
     document.getElementById('room-settings-modal').classList.add('hidden');
     document.getElementById('users-overlay').classList.add('hidden');
     
@@ -414,17 +413,14 @@ function enterRoom(roomId, password) {
     });
 }
 
-// CORREÇÃO SAFARI: Mata sessão ao fechar aba
 window.addEventListener('pagehide', () => {
-    // Se for convidado, a gente quer que morra mesmo ao fechar a página (não no F5)
-    // A persistência só segura se o F5 acontecer. O pagehide é para garantir cleanup.
+    if (currentRoom && userStatusRef) remove(userStatusRef);
 });
 
 document.getElementById('btn-leave-room').addEventListener('click', leaveRoom);
 function leaveRoom() {
     if (!currentRoom) return;
     
-    // LIMPA PERSISTÊNCIA
     sessionStorage.removeItem('hardcall_room');
     sessionStorage.removeItem('hardcall_key');
 
@@ -432,7 +428,6 @@ function leaveRoom() {
     if (userStatusRef) remove(userStatusRef);
     currentRoom = null;
     roomKey = null;
-    
     if(isGuest) {
         signOut(auth);
         location.reload();
@@ -482,7 +477,6 @@ function setupPresence(roomId) {
     userStatusRef = ref(db, 'rooms/' + roomId + '/users/' + currentUser.uid);
     onDisconnect(userStatusRef).remove();
     set(userStatusRef, { nickname: currentUser.nickname, status: 'online', lastSeen: serverTimestamp() });
-    
     onValue(ref(db, 'rooms/' + roomId + '/users'), (snap) => {
         document.getElementById('online-count').innerText = snap.size;
         const list = document.getElementById('users-list');
