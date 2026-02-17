@@ -586,3 +586,29 @@ document.getElementById('btn-cancel-reply').addEventListener('click', () => {
     document.getElementById('reply-preview').classList.add('hidden');
 });
 
+// Função para cancelar o login de convidado e fechar o modal
+function closeGuestModal() {
+    document.getElementById('guest-nick-modal').classList.add('hidden');
+    // Como ele já iniciou o login anônimo no Firebase, fazemos logout para limpar
+    signOut(auth); 
+    isGuest = false;
+}
+
+document.getElementById('btn-close-guest-nick').addEventListener('click', closeGuestModal);
+
+document.getElementById('guest-nick-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'guest-nick-modal') {
+        closeGuestModal();
+        playSound('click');
+    }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        if (!document.getElementById('guest-nick-modal').classList.contains('hidden')) {
+            closeGuestModal();
+        } else if (currentRoom) {
+            leaveRoom();
+        }
+    }
+});
